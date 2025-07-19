@@ -1,0 +1,22 @@
+Create an api for stanford university computer science students using Golang and Gin. 
+The API we should be able to perform the following operations.
+
+ - Add a new student.
+ - Get all students.
+ - Get a student with an ID.
+- Update existing student information.
+- Delete a student record.
+
+API expectations:
+ - Support API versioning (e.g., api/v1/<resource>).
+ - Using proper HTTP verbs for different operations.
+ - API should emit meaningful logs with appropriate log levels.
+ - API should have a /healthcheck endpoint.
+ - Unit tests for different endpoints.
+
+ Other considerations: 
+ - Explicitly maintain dependencies in a separate file
+ - Ability to run DB schema migrations to create the student table.
+ - Config (such as database URL) should not be hard-coded in the code and should be passed through environment variables.
+- Postman collection for the APIs
+
