@@ -24,19 +24,24 @@ func NewStudentHandler(db *sql.DB) *StudentHandler {
 
 // CreateStudent handles POST requests to create a new student
 func (h *StudentHandler) CreateStudent(c *gin.Context) {
+	log.Printf("Received POST request to create student")
+	
 	var student models.Student
 	if err := c.ShouldBindJSON(&student); err != nil {
 		log.Printf("Error binding JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	
+	log.Printf("Parsed student data: %+v", student)
 
 	if err := h.repo.Create(&student); err != nil {
-		log.Printf("Error creating student: %v", err)
+		log.Printf("Error creating student in database: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create student"})
 		return
 	}
-
+	
+	log.Printf("Student created successfully with ID: %d", student.ID)
 	c.JSON(http.StatusCreated, student)
 }
 
@@ -142,8 +147,26 @@ func (h *StudentHandler) DeleteStudent(c *gin.Context) {
 
 // HealthCheck handles GET requests to check API health
 func (h *StudentHandler) HealthCheck(c *gin.Context) {
+	// Test database connection
+	var dbStatus string
+	var count int
+	err := h.repo.(*models.PostgresStudentRepository).DB.QueryRow("SELECT COUNT(*) FROM students").Scan(&count)
+	if err != nil {
+		dbStatus = "disconnected"
+		log.Printf("Database health check failed: %v", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "error",
+			"message": "API is running but database is not accessible",
+			"database": dbStatus,
+		})
+		return
+	}
+	
+	dbStatus = "connected"
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 		"message": "API is running",
+		"database": dbStatus,
+		"total_students": count,
 	})
 }

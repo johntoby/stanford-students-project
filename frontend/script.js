@@ -66,6 +66,8 @@ document.getElementById('student-form').addEventListener('submit', async (e) => 
         graduation_year: parseInt(document.getElementById('graduationYear').value) || null
     };
     
+    console.log('Sending student data:', formData);
+    
     try {
         const response = await fetch(`${API_BASE_URL}/students`, {
             method: 'POST',
@@ -75,17 +77,28 @@ document.getElementById('student-form').addEventListener('submit', async (e) => 
             body: JSON.stringify(formData)
         });
         
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
         if (response.ok) {
+            const result = await response.json();
+            console.log('Student created:', result);
             document.getElementById('student-form').reset();
             showMessage('Student added successfully!', 'success');
             showTab('students-list');
         } else {
-            const error = await response.json();
-            showMessage(`Error: ${error.error}`, 'error');
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            try {
+                const error = JSON.parse(errorText);
+                showMessage(`Error: ${error.error}`, 'error');
+            } catch {
+                showMessage(`Error: ${response.status} - ${errorText}`, 'error');
+            }
         }
     } catch (error) {
+        console.error('Network error:', error);
         showMessage('Error adding student. Please make sure the API is running.', 'error');
-        console.error('Error adding student:', error);
     }
 });
 
