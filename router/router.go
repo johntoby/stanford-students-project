@@ -2,7 +2,9 @@ package router
 
 import (
 	"database/sql"
+	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"stanford-uni-students-api/handlers"
 	"stanford-uni-students-api/middleware"
@@ -15,6 +17,19 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	// Use middleware
 	r.Use(gin.Recovery())
 	r.Use(middleware.Logger())
+	
+	// CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+	
+	// Serve static files
+	r.Static("/static", "./frontend")
+	r.StaticFile("/", "./frontend/index.html")
 	
 	// Create handlers
 	studentHandler := handlers.NewStudentHandler(db)

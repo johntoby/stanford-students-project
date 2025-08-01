@@ -41,6 +41,20 @@ A RESTful API for managing Stanford University Computer Science students built w
 
 ## Running the API
 
+### Option 1: Using Docker Compose (Recommended)
+
+1. Run with Docker Compose:
+   ```
+   docker-compose up --build
+   ```
+
+2. The application will be available at:
+   - Frontend: `http://localhost:8080`
+   - API: `http://localhost:8080/api/v1`
+   - Health Check: `http://localhost:8080/healthcheck`
+
+### Option 2: Manual Setup
+
 1. Start the PostgreSQL database
 
 2. Run the API:
@@ -48,7 +62,16 @@ A RESTful API for managing Stanford University Computer Science students built w
    go run main.go
    ```
 
-3. The API will be available at `http://localhost:8080`
+3. The application will be available at `http://localhost:8080`
+
+## Frontend Interface
+
+The application now includes a web-based frontend interface accessible at `http://localhost:8080`. The frontend provides:
+
+- **Students List**: View all registered students
+- **Add Student**: Form to add new students
+- **Edit Student**: Update existing student information
+- **Delete Student**: Remove students from the system
 
 ## API Endpoints
 
@@ -79,6 +102,10 @@ A Postman collection is available in the `postman` directory. Import the `stanfo
 stanford-uni-students-api/
 ├── config/             # Configuration package
 ├── db/                 # Database connection and migrations
+├── frontend/           # Web frontend interface
+│   ├── index.html      # Main HTML file
+│   ├── style.css       # CSS styles
+│   └── script.js       # JavaScript functionality
 ├── handlers/           # HTTP request handlers
 ├── middleware/         # Middleware functions
 ├── models/             # Data models and repositories
@@ -86,6 +113,8 @@ stanford-uni-students-api/
 ├── postman/            # Postman collection
 ├── .env                # Environment variables (not in version control)
 ├── .env.example        # Example environment variables
+├── docker-compose.yml  # Docker Compose configuration
+├── Dockerfile          # Docker build instructions
 ├── go.mod              # Go module file
 ├── go.sum              # Go module checksum
 ├── main.go             # Application entry point
@@ -105,5 +134,21 @@ stanford-uni-students-api/
 
 ### This README will be constantly updated as the application is developed and modified. 
 
+
+## Docker Deployment
+
+The application is containerized and can be deployed using Docker:
+
+### Build and Run
+```bash
+# Build the Docker image
+docker build -t stanford-students-api .
+
+# Run with Docker Compose (includes PostgreSQL)
+docker-compose up --build
+
+# Stop the services
+docker-compose down
+```
 
 ### Built with love by Johntoby .....
