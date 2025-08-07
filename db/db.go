@@ -10,16 +10,22 @@ import (
 
 // InitDB initializes the database connection
 func InitDB(cfg *config.Config) (*sql.DB, error) {
-	db, err := sql.Open("postgres", cfg.GetDBConnectionString())
+	connStr := cfg.GetDBConnectionString()
+	log.Printf("Attempting to connect to database with connection string: %s", connStr)
+	
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
+		log.Printf("Failed to open database connection: %v", err)
 		return nil, err
 	}
 
+	log.Println("Database connection opened, testing with ping...")
 	if err = db.Ping(); err != nil {
+		log.Printf("Database ping failed: %v", err)
 		return nil, err
 	}
 
-	log.Println("Database connection established")
+	log.Println("Database connection established successfully")
 	return db, nil
 }
 
