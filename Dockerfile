@@ -28,9 +28,6 @@ COPY --from=builder /app/main .
 # Copy frontend files
 COPY --from=builder /app/frontend ./frontend
 
-# Copy .env file
-COPY --from=builder /app/.env .
-
 EXPOSE 8080
 
 CMD ["./main"]

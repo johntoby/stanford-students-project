@@ -139,16 +139,51 @@ stanford-uni-students-api/
 
 The application is containerized and can be deployed using Docker:
 
-### Build and Run
+### Option 1: Using Docker Compose
 ```bash
-# Build the Docker image
-docker build -t stanford-students-api .
-
 # Run with Docker Compose (includes PostgreSQL)
 docker-compose up --build
 
 # Stop the services
 docker-compose down
+```
+
+### Option 2: Using Docker Commands (Automated Scripts)
+```bash
+# Make scripts executable (Linux/Mac)
+chmod +x *.sh
+
+# Start containers
+./start-containers.sh
+
+# Check status
+./status.sh
+
+# View logs
+./logs.sh
+
+# Stop containers
+./stop-containers.sh
+```
+
+### Manual Docker Commands
+```bash
+# Create network
+docker network create stanford-network
+
+# Start PostgreSQL
+docker run -d --name stanford-postgres --network stanford-network \
+  -e POSTGRES_DB=stanford_students -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres -p 5432:5432 \
+  -v stanford_postgres_data:/var/lib/postgresql/data postgres:15-alpine
+
+# Build and start application
+docker build -t stanford-students-api .
+docker run -d --name stanford-app --network stanford-network \
+  -e DB_HOST=stanford-postgres -e DB_PORT=5432 \
+  -e DB_USER=postgres -e DB_PASSWORD=postgres \
+  -e DB_NAME=stanford_students -e PORT=8080 \
+  -p 8080:8080 stanford-students-api
 ```
 
 ### Built with love by Johntoby .....
