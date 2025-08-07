@@ -1,4 +1,5 @@
 const API_BASE_URL = 'http://localhost:8080/api/v1';
+const HEALTH_CHECK_URL = 'http://localhost:8080/healthcheck';
 
 // Tab functionality
 function showTab(tabName) {
@@ -16,38 +17,94 @@ function showTab(tabName) {
     }
 }
 
+// Check database connection status
+async function checkDatabaseStatus() {
+    const statusElement = document.getElementById('db-status');
+    
+    try {
+        const response = await fetch(HEALTH_CHECK_URL);
+        const data = await response.json();
+        
+        if (data.status === 'ok' && data.database === 'connected') {
+            statusElement.className = 'db-status connected';
+            statusElement.innerHTML = '🟢 Database Connected';
+        } else {
+            statusElement.className = 'db-status disconnected';
+            statusElement.innerHTML = '🔴 Database Disconnected';
+        }
+    } catch (error) {
+        statusElement.className = 'db-status disconnected';
+        statusElement.innerHTML = '🔴 API Unreachable';
+        console.error('Health check failed:', error);
+    }
+}
+
 // Load all students
 async function loadStudents() {
     const container = document.getElementById('students-container');
     container.innerHTML = '<div class="loading">Loading students...</div>';
     
+    // Check database status first
+    await checkDatabaseStatus();
+    
     try {
         const response = await fetch(`${API_BASE_URL}/students`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const students = await response.json();
         
         if (students.length === 0) {
-            container.innerHTML = '<p>No students found. Add some students to get started!</p>';
+            container.innerHTML = '<div class="no-students">No students found. Add some students to get started!</div>';
             return;
         }
         
-        container.innerHTML = students.map(student => `
-            <div class="student-card">
-                <div class="student-info">
-                    <div><strong>Name:</strong> ${student.first_name} ${student.last_name}</div>
-                    <div><strong>Email:</strong> ${student.email}</div>
-                    <div><strong>Major:</strong> ${student.major}</div>
-                    <div><strong>GPA:</strong> ${student.gpa || 'N/A'}</div>
-                    <div><strong>Enrollment:</strong> ${student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString() : 'N/A'}</div>
-                    <div><strong>Graduation:</strong> ${student.graduation_year || 'N/A'}</div>
-                </div>
-                <div class="student-actions">
-                    <button class="btn btn-edit" onclick="editStudent(${student.id})">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteStudent(${student.id})">Delete</button>
-                </div>
-            </div>
-        `).join('');
+        // Display students in a table format
+        container.innerHTML = `
+            <table class="students-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Major</th>
+                        <th>GPA</th>
+                        <th>Enrollment</th>
+                        <th>Graduation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${students.map(student => `
+                        <tr>
+                            <td>${student.id}</td>
+                            <td>${student.first_name} ${student.last_name}</td>
+                            <td>${student.email}</td>
+                            <td>${student.major}</td>
+                            <td>${student.gpa ? student.gpa.toFixed(2) : 'N/A'}</td>
+                            <td>${student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString() : 'N/A'}</td>
+                            <td>${student.graduation_year || 'N/A'}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-edit btn-sm" onclick="editStudent(${student.id})">Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteStudent(${student.id})">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
     } catch (error) {
-        container.innerHTML = '<div class="error">Error loading students. Please make sure the API is running.</div>';
+        container.innerHTML = `
+            <div class="error">
+                <strong>Error loading students:</strong><br>
+                ${error.message}<br>
+                <small>Please check if the API server is running and the database is connected.</small>
+            </div>
+        `;
         console.error('Error loading students:', error);
     }
 }
@@ -219,5 +276,9 @@ window.onclick = function(event) {
 
 // Load students on page load
 document.addEventListener('DOMContentLoaded', () => {
+    checkDatabaseStatus();
     loadStudents();
+    
+    // Check database status every 30 seconds
+    setInterval(checkDatabaseStatus, 30000);
 });

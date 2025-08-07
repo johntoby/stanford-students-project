@@ -28,8 +28,13 @@
         </div>
 
         <div id="students-list" class="tab-content active">
-            <h2>Students List</h2>
-            <button onclick="loadStudents()" class="btn btn-primary">Refresh List</button>
+            <div class="section-header">
+                <h2>Students List</h2>
+                <div class="header-controls">
+                    <div id="db-status" class="db-status">Checking connection...</div>
+                    <button onclick="loadStudents()" class="btn btn-primary">Refresh List</button>
+                </div>
+            </div>
             <div id="students-container"></div>
         </div>
 
