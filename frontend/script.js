@@ -1,5 +1,9 @@
-const API_BASE_URL = 'http://localhost:8080/api/v1';
-const HEALTH_CHECK_URL = 'http://localhost:8080/healthcheck';
+// Dynamic API URLs that work on both localhost and remote servers
+const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api/v1`;
+const HEALTH_CHECK_URL = `${window.location.protocol}//${window.location.host}/healthcheck`;
+
+console.log('API Base URL:', API_BASE_URL);
+console.log('Health Check URL:', HEALTH_CHECK_URL);
 
 // Tab functionality
 function showTab(tabName) {
