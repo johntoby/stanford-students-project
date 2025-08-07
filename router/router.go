@@ -29,6 +29,9 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	// Serve static files
 	r.Static("/static", "./frontend")
 	r.StaticFile("/", "./frontend/index.html")
+	r.StaticFile("/style.css", "./frontend/style.css")
+	r.StaticFile("/stanford-theme.css", "./frontend/stanford-theme.css")
+	r.StaticFile("/script.js", "./frontend/script.js")
 	
 	// Create handlers
 	studentHandler := handlers.NewStudentHandler(db)
