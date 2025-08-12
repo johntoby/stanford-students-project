@@ -215,9 +215,9 @@ stanford-uni-students-api/
 ### This README will be constantly updated as the application is developed and modified. 
 
 
-## Docker Deployment
+## For Normal Docker Deployment
 
-### Recommended Approach: Make + Docker Compose
+Notethat Recommended Approach: Make + Docker Compose
 
 #### Prerequisites Check:
 ```bash
