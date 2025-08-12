@@ -15,9 +15,46 @@ A RESTful API for managing Stanford University Computer Science students built w
 
 ## Prerequisites
 
+### For Local Development:
 - Go 1.21 or higher
 - PostgreSQL database
 - Git
+
+### For Docker Deployment:
+- **Docker** (version 20.10 or higher)
+- **Docker Compose** (version 2.0 or higher)
+- **Make** (GNU Make utility)
+- **Git**
+
+#### Automated Installation:
+```bash
+# Download and run the installation script
+curl -fsSL https://raw.githubusercontent.com/your-repo/stanford-students-project/main/install-prerequisites.sh | bash
+
+# Or clone the repo first and run locally
+git clone <repository-url>
+cd stanford-students-project
+chmod +x install-prerequisites.sh
+./install-prerequisites.sh
+```
+
+#### Manual Installation Commands:
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install docker.io docker-compose make git
+
+# CentOS/RHEL
+sudo yum install docker docker-compose make git
+
+# macOS (with Homebrew)
+brew install docker docker-compose make git
+
+# Verify installations
+docker --version
+docker-compose --version
+make --version
+```
 
 ## Installation
 
@@ -41,28 +78,71 @@ A RESTful API for managing Stanford University Computer Science students built w
 
 ## Running the API
 
-### Option 1: Using Docker Compose (Recommended)
+### Option 1: Using Make (Recommended)
 
-1. Run with Docker Compose:
-   ```
-   docker-compose up --build
-   ```
+#### Quick Start:
+```bash
+# Start everything (database + migrations + API)
+make run-api
+```
 
-2. The application will be available at:
-   - Frontend: `http://localhost:8080`
-   - API: `http://localhost:8080/api/v1`
-   - Health Check: `http://localhost:8080/healthcheck`
+#### Step-by-step execution:
+```bash
+# 1. Start database container
+make start-db
 
-### Option 2: Manual Setup
+# 2. Run database migrations
+make migrate
 
-1. Start the PostgreSQL database
+# 3. Build API docker image
+make build-api
 
-2. Run the API:
-   ```
-   go run main.go
-   ```
+# 4. Run API container (with dependency checks)
+make run-api
+```
 
-3. The application will be available at `http://localhost:8080`
+#### Available Make Targets:
+```bash
+# Core targets
+make start-db      # Start PostgreSQL database container
+make migrate       # Run database DML migrations
+make build-api     # Build REST API docker image
+make run-api       # Run REST API container (auto-handles dependencies)
+
+# Utility targets
+make start-all     # Start all services (same as run-api)
+make status        # Show container status
+make logs          # View application logs
+make stop-all      # Stop all containers
+make clean         # Remove containers, networks, and volumes
+make help          # Show all available targets
+```
+
+#### Execution Order:
+The `run-api` target automatically handles dependencies in this order:
+1. **Check Database**: Verifies if database container is running (starts if needed)
+2. **Check Migrations**: Verifies if migrations are applied (runs if needed)
+3. **Start API**: Uses docker-compose to start the API container
+
+### Option 2: Using Docker Compose
+
+```bash
+# Start all services
+docker-compose up --build
+
+# Stop services
+docker-compose down
+```
+
+### Option 3: Manual Setup (Local Development)
+
+1. Start PostgreSQL database
+2. Run: `go run main.go`
+
+### Access Points:
+- **Frontend**: `http://localhost:8080`
+- **API**: `http://localhost:8080/api/v1`
+- **Health Check**: `http://localhost:8080/healthcheck`
 
 ## Frontend Interface
 
@@ -137,20 +217,40 @@ stanford-uni-students-api/
 
 ## Docker Deployment
 
-The application is containerized and can be deployed using Docker:
+### Recommended Approach: Make + Docker Compose
 
-### Option 1: Using Docker Compose
+#### Prerequisites Check:
 ```bash
-# Run with Docker Compose (includes PostgreSQL)
-docker-compose up --build
-
-# Stop the services
-docker-compose down
+# Verify required tools are installed
+docker --version          # Should show Docker 20.10+
+docker-compose --version   # Should show Docker Compose 2.0+
+make --version            # Should show GNU Make
 ```
 
-### Option 2: Using Docker Commands (Automated Scripts)
+#### Deployment Steps:
 ```bash
-# Make scripts executable (Linux/Mac)
+# Clone and navigate to project
+git clone <repository-url>
+cd stanford-students-project
+
+# Start the application (one command does everything)
+make run-api
+
+# Monitor status
+make status
+
+# View logs
+make logs
+
+# Stop when done
+make stop-all
+```
+
+### Alternative Deployment Methods:
+
+#### Using Shell Scripts:
+```bash
+# Make scripts executable
 chmod +x *.sh
 
 # Start containers
@@ -166,7 +266,15 @@ chmod +x *.sh
 ./stop-containers.sh
 ```
 
-### Manual Docker Commands
+#### Using Docker Compose Only:
+```bash
+docker-compose up --build    # Start all services
+docker-compose down          # Stop all services
+docker-compose ps            # Check status
+docker-compose logs -f app   # View logs
+```
+
+#### Manual Docker Commands:
 ```bash
 # Create network
 docker network create stanford-network
@@ -184,6 +292,40 @@ docker run -d --name stanford-app --network stanford-network \
   -e DB_USER=postgres -e DB_PASSWORD=postgres \
   -e DB_NAME=stanford_students -e PORT=8080 \
   -p 8080:8080 stanford-students-api
+```
+
+### Troubleshooting:
+
+#### Common Issues:
+```bash
+# If containers fail to start
+make clean          # Clean up everything
+make run-api        # Try again
+
+# If database connection fails
+make start-db       # Ensure database is running
+make migrate        # Ensure migrations are applied
+
+# If port 8080 is busy
+sudo lsof -i :8080  # Check what's using the port
+# Kill the process or change port in docker-compose.yml
+```
+
+## Quick Reference
+
+### Most Common Commands:
+```bash
+# Start everything
+make run-api
+
+# Check if running
+make status
+
+# View logs
+make logs
+
+# Stop everything
+make stop-all
 ```
 
 ### Built with love by Johntoby .....
