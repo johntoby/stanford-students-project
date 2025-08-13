@@ -43,7 +43,7 @@ start-db: network
 		-e POSTGRES_DB=$(DB_NAME) \
 		-e POSTGRES_USER=$(DB_USER) \
 		-e POSTGRES_PASSWORD=$(DB_PASSWORD) \
-		-p 5432:5432 \
+		-p 5432:5433 \
 		-v stanford_postgres_data:/var/lib/postgresql/data \
 		postgres:15-alpine
 	@echo "⏳ Waiting for PostgreSQL to be ready..."
