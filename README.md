@@ -79,9 +79,15 @@ make --version
    ```
    - Edit the `.env` file with your database credentials
 
+
+
 ## Running the API
 
+
+
+
 ### Option 1: Using Make (Recommended)
+
 
 #### Quick Start:
 ```bash
