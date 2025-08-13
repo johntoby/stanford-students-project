@@ -9,6 +9,9 @@ DB_NAME = stanford_students
 DB_USER = postgres
 DB_PASSWORD = postgres
 
+# Docker Compose command detection
+DOCKER_COMPOSE := $(shell command -v docker-compose 2> /dev/null || command -v docker 2> /dev/null && echo "docker compose")
+
 # Default target
 .PHONY: help
 help:
@@ -101,8 +104,8 @@ check-migrations:
 .PHONY: run-api
 run-api: check-db check-migrations
 	@echo "🚀 Starting REST API container with docker-compose..."
-	@docker-compose down app 2>/dev/null || true
-	@docker-compose up -d app
+	@$(DOCKER_COMPOSE) down app 2>/dev/null || true
+	@$(DOCKER_COMPOSE) up -d app
 	@echo "⏳ Waiting for API to start..."
 	@sleep 5
 	@echo "✅ API container started!"
@@ -119,24 +122,24 @@ start-all: run-api
 .PHONY: status
 status:
 	@echo "📊 Container Status:"
-	@docker-compose ps
+	@$(DOCKER_COMPOSE) ps
 
 # Show application logs
 .PHONY: logs
 logs:
 	@echo "📝 Application Logs:"
-	@docker-compose logs -f app
+	@$(DOCKER_COMPOSE) logs -f app
 
 # Stop all containers
 .PHONY: stop-all
 stop-all:
 	@echo "🛑 Stopping all containers..."
-	@docker-compose down
+	@$(DOCKER_COMPOSE) down
 	@echo "✅ All containers stopped!"
 
 # Clean up everything
 .PHONY: clean
 clean:
 	@echo "🧹 Cleaning up..."
-	@docker-compose down -v --rmi all
+	@$(DOCKER_COMPOSE) down -v --rmi all
 	@echo "✅ Cleanup completed!"
