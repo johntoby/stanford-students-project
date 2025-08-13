@@ -105,10 +105,13 @@ check-migrations:
 run-api: check-db check-migrations
 	@echo "🚀 Starting REST API container with docker-compose..."
 	@echo "Using: $(DOCKER_COMPOSE)"
+	@echo "Stopping existing containers to avoid port conflicts..."
+	@docker stop $(DB_CONTAINER) $(APP_CONTAINER) 2>/dev/null || true
+	@docker rm $(DB_CONTAINER) $(APP_CONTAINER) 2>/dev/null || true
 	@$(DOCKER_COMPOSE) down 2>/dev/null || true
-	@$(DOCKER_COMPOSE) up -d app
+	@$(DOCKER_COMPOSE) up -d
 	@echo "⏳ Waiting for API to start..."
-	@sleep 5
+	@sleep 10
 	@echo "✅ API container started!"
 	@echo "📱 Frontend: http://localhost:8080"
 	@echo "🔗 API: http://localhost:8080/api/v1"
