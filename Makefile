@@ -10,7 +10,7 @@ DB_USER = postgres
 DB_PASSWORD = postgres
 
 # Docker Compose command detection
-DOCKER_COMPOSE := $(shell command -v docker-compose 2> /dev/null || command -v docker 2> /dev/null && echo "docker compose")
+DOCKER_COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; elif docker compose version >/dev/null 2>&1; then echo "docker compose"; else echo "docker-compose"; fi)
 
 # Default target
 .PHONY: help
@@ -104,7 +104,8 @@ check-migrations:
 .PHONY: run-api
 run-api: check-db check-migrations
 	@echo "🚀 Starting REST API container with docker-compose..."
-	@$(DOCKER_COMPOSE) down app 2>/dev/null || true
+	@echo "Using: $(DOCKER_COMPOSE)"
+	@$(DOCKER_COMPOSE) down 2>/dev/null || true
 	@$(DOCKER_COMPOSE) up -d app
 	@echo "⏳ Waiting for API to start..."
 	@sleep 5
