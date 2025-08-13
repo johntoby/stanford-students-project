@@ -27,6 +27,9 @@ A RESTful API for managing Stanford University Computer Science students built w
 - **Git**
 
 #### Automated Installation:
+
+I have prepared an installation script to automatically all the required prerequisites necessary for this application to run. It is locatd in /install-prerequisites.sh 
+
 ```bash
 # Download and run the installation script
 curl -fsSL https://raw.githubusercontent.com/your-repo/stanford-students-project/main/install-prerequisites.sh | bash
