@@ -16,6 +16,9 @@ DOCKER_COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then ech
 .PHONY: help
 help:
 	@echo "Stanford Students API - Available targets:"
+	@echo "  build         - Build Go application"
+	@echo "  test          - Run tests"
+	@echo "  lint          - Run code linting"
 	@echo "  start-db      - Start PostgreSQL database container"
 	@echo "  migrate       - Run database migrations"
 	@echo "  build-api     - Build REST API docker image"
@@ -72,6 +75,30 @@ migrate:
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP \
 		);"
 	@echo "✅ Database migrations completed!"
+
+# Build Go application
+.PHONY: build
+build:
+	@echo "🔨 Building Go application..."
+	@go mod download
+	@go build -v ./...
+	@echo "✅ Go application built successfully!"
+
+# Run tests
+.PHONY: test
+test:
+	@echo "🧪 Running tests..."
+	@go test -v ./...
+	@echo "✅ Tests completed!"
+
+# Run code linting
+.PHONY: lint
+lint:
+	@echo "🔍 Installing golangci-lint..."
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.54.2
+	@echo "🔍 Running code linting..."
+	@$$(go env GOPATH)/bin/golangci-lint run --timeout=5m
+	@echo "✅ Linting completed!"
 
 # Build REST API docker image
 .PHONY: build-api
