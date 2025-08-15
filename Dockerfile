@@ -10,9 +10,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 RUN go mod verify
 
-# Copy source code (excluding test files)
+# Copy source code
 COPY . .
-RUN rm -f test-db-connection.go
 
 # Tidy modules to ensure consistency
 RUN go mod tidy

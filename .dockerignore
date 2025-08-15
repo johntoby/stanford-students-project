@@ -1,4 +1,4 @@
-test-db-connection.go
+tools/
 *.sh
 .git
 .gitignore

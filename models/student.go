@@ -26,6 +26,7 @@ type StudentRepository interface {
 	GetByID(id int) (*Student, error)
 	Update(student *Student) error
 	Delete(id int) error
+	HealthCheck() (int, error)
 }
 
 // PostgresStudentRepository implements StudentRepository for PostgreSQL
@@ -193,4 +194,11 @@ func (r *PostgresStudentRepository) Delete(id int) error {
 	query := `DELETE FROM students WHERE id = $1`
 	_, err := r.DB.Exec(query, id)
 	return err
+}
+
+// HealthCheck returns the count of students and checks database connectivity
+func (r *PostgresStudentRepository) HealthCheck() (int, error) {
+	var count int
+	err := r.DB.QueryRow("SELECT COUNT(*) FROM students").Scan(&count)
+	return count, err
 }

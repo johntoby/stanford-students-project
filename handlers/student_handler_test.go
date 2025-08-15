@@ -47,6 +47,11 @@ func (m *MockStudentRepository) Delete(id int) error {
 	return args.Error(0)
 }
 
+func (m *MockStudentRepository) HealthCheck() (int, error) {
+	args := m.Called()
+	return args.Int(0), args.Error(1)
+}
+
 func setupTestRouter() (*gin.Engine, *MockStudentRepository) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -156,7 +161,10 @@ func TestGetStudentByID(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, mockRepo := setupTestRouter()
+	
+	// Setup mock
+	mockRepo.On("HealthCheck").Return(5, nil)
 	
 	// Create test request
 	req, _ := http.NewRequest("GET", "/healthcheck", nil)
@@ -167,6 +175,7 @@ func TestHealthCheck(t *testing.T) {
 	
 	// Assert
 	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
 	
 	// Verify response
 	var response map[string]interface{}
@@ -174,4 +183,6 @@ func TestHealthCheck(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", response["status"])
 	assert.Equal(t, "API is running", response["message"])
+	assert.Equal(t, "connected", response["database"])
+	assert.Equal(t, float64(5), response["total_students"])
 }
