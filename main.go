@@ -28,7 +28,8 @@ func main() {
 
 	// Run migrations
 	if err := db.RunMigrations(database); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		log.Printf("Failed to run migrations: %v", err)
+		return
 	}
 
 	// Setup router

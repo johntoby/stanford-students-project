@@ -18,6 +18,7 @@ help:
 	@echo "Stanford Students API - Available targets:"
 	@echo "  build         - Build Go application"
 	@echo "  test          - Run tests"
+	@echo "  format        - Format code with gofmt and goimports"
 	@echo "  lint          - Run code linting"
 	@echo "  start-db      - Start PostgreSQL database container"
 	@echo "  migrate       - Run database migrations"
@@ -92,9 +93,18 @@ test:
 	@go test -v ./...
 	@echo "✅ Tests completed!"
 
+# Format code
+.PHONY: format
+format:
+	@echo "📝 Formatting code..."
+	@go fmt ./...
+	@go install golang.org/x/tools/cmd/goimports@latest
+	@goimports -w .
+	@echo "✅ Code formatted!"
+
 # Run code linting
 .PHONY: lint
-lint:
+lint: format
 	@echo "🔍 Installing golangci-lint..."
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.54.2
 	@echo "🔍 Running code linting..."

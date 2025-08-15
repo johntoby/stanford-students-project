@@ -41,16 +41,12 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	
 	// API v1 routes
 	v1 := r.Group("/api/v1")
-	{
-		students := v1.Group("/students")
-		{
-			students.POST("", studentHandler.CreateStudent)
-			students.GET("", studentHandler.GetAllStudents)
-			students.GET("/:id", studentHandler.GetStudentByID)
-			students.PUT("/:id", studentHandler.UpdateStudent)
-			students.DELETE("/:id", studentHandler.DeleteStudent)
-		}
-	}
+	students := v1.Group("/students")
+	students.POST("", studentHandler.CreateStudent)
+	students.GET("", studentHandler.GetAllStudents)
+	students.GET("/:id", studentHandler.GetStudentByID)
+	students.PUT("/:id", studentHandler.UpdateStudent)
+	students.DELETE("/:id", studentHandler.DeleteStudent)
 	
 	return r
 }

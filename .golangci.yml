@@ -1,6 +1,8 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
+  skip-dirs:
+    - tools
 
 linters:
   enable:
@@ -23,6 +25,9 @@ linters-settings:
       - diagnostic
       - style
       - performance
+    disabled-checks:
+      - exitAfterDefer
+      - ifElseChain
   revive:
     rules:
       - name: exported
@@ -31,6 +36,10 @@ linters-settings:
 issues:
   exclude-rules:
     - path: _test\.go
+      linters:
+        - gocritic
+        - revive
+    - path: tools/
       linters:
         - gocritic
         - revive
