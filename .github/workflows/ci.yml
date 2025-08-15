@@ -46,7 +46,8 @@ on:
           - production
 
 env:
-  DOCKER_IMAGE: stanford-students-api
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/stanford-students-api
   DOCKER_TAG: ${{ github.sha }}
 
 jobs:
@@ -94,6 +95,8 @@ jobs:
     - name: Build and Push Docker Image
       run: |
         echo "🐳 Building and pushing Docker image..."
+        echo "Registry: ${{ env.DOCKER_REGISTRY }}"
+        echo "Image: ${{ env.DOCKER_IMAGE }}"
         docker build -t ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} .
         docker build -t ${{ env.DOCKER_IMAGE }}:latest .
         docker push ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
