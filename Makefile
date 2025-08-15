@@ -80,6 +80,7 @@ migrate:
 .PHONY: build
 build:
 	@echo "🔨 Building Go application..."
+	@go mod tidy
 	@go mod download
 	@go build -v ./...
 	@echo "✅ Go application built successfully!"

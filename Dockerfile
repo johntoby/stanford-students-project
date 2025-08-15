@@ -8,10 +8,14 @@ COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
+RUN go mod verify
 
 # Copy source code (excluding test files)
 COPY . .
 RUN rm -f test-db-connection.go
+
+# Tidy modules to ensure consistency
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
