@@ -3,7 +3,9 @@
 # Variables
 DOCKER_NETWORK = stanford-network
 DB_CONTAINER = stanford-postgres
-APP_CONTAINER = stanford-app
+APP_CONTAINER_1 = stanford-app1
+APP_CONTAINER_2 = stanford-app2
+NGINX_CONTAINER = stanford-nginx
 APP_IMAGE = stanford-students-api
 DB_NAME = stanford_students
 DB_USER = postgres
@@ -23,11 +25,12 @@ help:
 	@echo "  start-db      - Start PostgreSQL database container"
 	@echo "  migrate       - Run database migrations"
 	@echo "  build-api     - Build REST API docker image"
-	@echo "  run-api       - Run REST API docker container"
-	@echo "  start-all     - Start database and API containers"
+	@echo "  run-api       - Run load-balanced API with nginx (2 instances)"
+	@echo "  start-all     - Start all services (database + 2 APIs + nginx)"
 	@echo "  stop-all      - Stop and remove all containers"
 	@echo "  status        - Show container status"
 	@echo "  logs          - Show application logs"
+	@echo "  logs-nginx    - Show nginx logs"
 	@echo "  clean         - Remove containers, network and volumes"
 
 # Create Docker network
@@ -138,22 +141,24 @@ check-migrations:
 		echo "✅ Database migrations already applied"; \
 	fi
 
-# Run REST API docker container with dependencies
+# Run load-balanced REST API with nginx
 .PHONY: run-api
 run-api: check-db check-migrations
-	@echo "🚀 Starting REST API container with docker-compose..."
+	@echo "🚀 Starting load-balanced API with nginx (2 instances)..."
 	@echo "Using: $(DOCKER_COMPOSE)"
 	@echo "Stopping existing containers to avoid port conflicts..."
-	@docker stop $(DB_CONTAINER) $(APP_CONTAINER) 2>/dev/null || true
-	@docker rm $(DB_CONTAINER) $(APP_CONTAINER) 2>/dev/null || true
+	@docker stop $(DB_CONTAINER) $(APP_CONTAINER_1) $(APP_CONTAINER_2) $(NGINX_CONTAINER) 2>/dev/null || true
+	@docker rm $(DB_CONTAINER) $(APP_CONTAINER_1) $(APP_CONTAINER_2) $(NGINX_CONTAINER) 2>/dev/null || true
 	@$(DOCKER_COMPOSE) down 2>/dev/null || true
 	@$(DOCKER_COMPOSE) up -d
-	@echo "⏳ Waiting for API to start..."
-	@sleep 10
-	@echo "✅ API container started!"
-	@echo "📱 Frontend: http://localhost:8080"
-	@echo "🔗 API: http://localhost:8080/api/v1"
-	@echo "💚 Health: http://localhost:8080/healthcheck"
+	@echo "⏳ Waiting for services to start..."
+	@sleep 15
+	@echo "✅ Load-balanced API started!"
+	@echo "📱 Frontend (via nginx): http://localhost:8080"
+	@echo "🔗 API (via nginx): http://localhost:8080/api/v1"
+	@echo "💚 Health Check: http://localhost:8080/healthcheck"
+	@echo "🌐 Nginx Health: http://localhost:8080/nginx-health"
+	@echo "⚙️  Load balancing between 2 API instances"
 
 # Start all services
 .PHONY: start-all
@@ -169,8 +174,14 @@ status:
 # Show application logs
 .PHONY: logs
 logs:
-	@echo "📝 Application Logs:"
-	@$(DOCKER_COMPOSE) logs -f app
+	@echo "📝 Application Logs (both instances):"
+	@$(DOCKER_COMPOSE) logs -f app1 app2
+
+# Show nginx logs
+.PHONY: logs-nginx
+logs-nginx:
+	@echo "🌐 Nginx Load Balancer Logs:"
+	@$(DOCKER_COMPOSE) logs -f nginx
 
 # Stop all containers
 .PHONY: stop-all
