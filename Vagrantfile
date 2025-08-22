@@ -3,8 +3,8 @@
 
 Vagrant.configure("2") do |config|
   # Use Ubuntu 24.04 LTS
-  config.vm.box = "ubuntu/noble64"
-  config.vm.box_version = "20240423.0.0"
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = "20241002.0.0"
 
   # Configure VM resources
   config.vm.provider "virtualbox" do |vb|
