@@ -20,9 +20,9 @@ RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Final stage
-FROM alpine:latest
+FROM ubuntu:22.04
 
-RUN apk --no-cache add ca-certificates wget
+RUN apt-get update && apt-get install -y ca-certificates wget curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/
 
