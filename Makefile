@@ -190,6 +190,22 @@ stop-all:
 	@$(DOCKER_COMPOSE) down
 	@echo "✅ All containers stopped!"
 
+# Debug container issues
+.PHONY: debug
+debug:
+	@echo "🔍 Debugging container issues..."
+	@echo "Container Status:"
+	@$(DOCKER_COMPOSE) ps
+	@echo "
+App1 Logs:"
+	@$(DOCKER_COMPOSE) logs --tail=20 app1
+	@echo "
+App2 Logs:"
+	@$(DOCKER_COMPOSE) logs --tail=20 app2
+	@echo "
+Postgres Logs:"
+	@$(DOCKER_COMPOSE) logs --tail=10 postgres
+
 # Clean up everything
 .PHONY: clean
 clean:
