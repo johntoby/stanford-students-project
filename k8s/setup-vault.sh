@@ -26,6 +26,6 @@ sleep 10
 
 # Configure Vault with secrets
 echo "🔧 Configuring Vault with database credentials..."
-kubectl exec -n vault-system deployment/vault -- sh -c "export VAULT_TOKEN=root && vault kv put secret/database username=postgres password=postgres"
+kubectl exec -n vault-system deployment/vault -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN=root && vault kv put secret/database username=postgres password=postgres"
 
 echo "✅ Vault and External Secrets setup complete!"
