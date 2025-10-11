@@ -49,6 +49,8 @@ spec:
       labels:
         app: stanford-api
     spec:
+      nodeSelector:
+        type: application
       initContainers:
       - name: migration
         image: postgres:15-alpine

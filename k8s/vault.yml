@@ -42,6 +42,8 @@ spec:
       labels:
         app: vault
     spec:
+      nodeSelector:
+        type: dependent_services
       serviceAccountName: vault
       containers:
       - name: vault

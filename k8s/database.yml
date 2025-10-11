@@ -111,6 +111,8 @@ spec:
       labels:
         app: postgres
     spec:
+      nodeSelector:
+        type: database
       containers:
       - name: postgres
         image: postgres:15-alpine
