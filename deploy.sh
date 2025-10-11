@@ -46,11 +46,25 @@ echo "🗄️ Deploying Database..."
 kubectl apply -f k8s/database.yml
 
 echo "⏳ Waiting for PostgreSQL to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/postgres -n student-api
+if ! kubectl wait --for=condition=available --timeout=120s deployment/postgres -n student-api; then
+    echo "❌ PostgreSQL deployment failed. Checking status..."
+    echo "Deployment status:"
+    kubectl describe deployment postgres -n student-api
+    echo ""
+    echo "Pod status:"
+    kubectl get pods -l app=postgres -n student-api
+    echo ""
+    echo "Pod logs:"
+    kubectl logs -l app=postgres -n student-api --tail=50
+    echo ""
+    echo "External Secret status:"
+    kubectl describe externalsecret postgres-credentials -n student-api
+    exit 1
+fi
 
 # Wait for database pod to be ready
 echo "⏳ Waiting for PostgreSQL pod to be ready..."
-kubectl wait --for=condition=ready --timeout=300s pod -l app=postgres -n student-api
+kubectl wait --for=condition=ready --timeout=120s pod -l app=postgres -n student-api
 
 # Deploy Application
 echo "🚀 Deploying Application..."
