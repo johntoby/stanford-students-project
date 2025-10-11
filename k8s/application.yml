@@ -108,8 +108,8 @@ spec:
           echo "Migrations completed successfully"
       containers:
       - name: stanford-api
-        image: stanford-students-api:latest
-        imagePullPolicy: Never
+        image: johntoby/stanford-students-api:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
