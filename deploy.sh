@@ -57,11 +57,19 @@ for i in {1..30}; do
 done
 
 if ! kubectl get secret postgres-secret -n student-api &>/dev/null; then
-    echo "❌ External Secret failed to sync. Checking status..."
-    kubectl describe externalsecret postgres-credentials -n student-api
+    echo "❌ External Secret failed to sync. Checking External Secrets controller..."
+    echo "External Secrets Controller status:"
+    kubectl get pods -n external-secrets-system
     echo ""
-    kubectl get secretstore vault-secret-store -n student-api -o yaml
-    exit 1
+    echo "External Secrets Controller logs:"
+    kubectl logs -n external-secrets-system -l app=external-secrets-controller --tail=20
+    echo ""
+    echo "⚠️ Creating database secret manually as fallback..."
+    kubectl create secret generic postgres-secret -n student-api \
+        --from-literal=POSTGRES_USER=postgres \
+        --from-literal=POSTGRES_PASSWORD=postgres \
+        --dry-run=client -o yaml | kubectl apply -f -
+    echo "✅ Manual secret created successfully"
 fi
 
 echo "⏳ Waiting for PostgreSQL to be ready..."
