@@ -45,6 +45,25 @@ chmod +x k8s/setup-vault.sh
 echo "🗄️ Deploying Database..."
 kubectl apply -f k8s/database.yml
 
+# Wait for External Secret to sync
+echo "⏳ Waiting for database credentials to sync from Vault..."
+for i in {1..30}; do
+    if kubectl get secret postgres-secret -n student-api &>/dev/null; then
+        echo "✅ Database credentials synced successfully"
+        break
+    fi
+    echo "Waiting for External Secret to sync... ($i/30)"
+    sleep 5
+done
+
+if ! kubectl get secret postgres-secret -n student-api &>/dev/null; then
+    echo "❌ External Secret failed to sync. Checking status..."
+    kubectl describe externalsecret postgres-credentials -n student-api
+    echo ""
+    kubectl get secretstore vault-secret-store -n student-api -o yaml
+    exit 1
+fi
+
 echo "⏳ Waiting for PostgreSQL to be ready..."
 if ! kubectl wait --for=condition=available --timeout=120s deployment/postgres -n student-api; then
     echo "❌ PostgreSQL deployment failed. Checking status..."
