@@ -32,35 +32,11 @@ kubectl wait --for=condition=available --timeout=300s deployment/external-secret
 echo "⏳ Waiting for Vault pod to be ready..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=vault -n vault-system
 
-# Initialize Vault if not already initialized
-echo "🔍 Checking Vault initialization status..."
-VAULT_STATUS=$(kubectl exec -n vault-system deployment/vault -- vault status -format=json 2>/dev/null || echo '{"initialized":false}')
+# Since Vault is running in dev mode, it's already initialized and unsealed
+echo "ℹ️ Vault is running in dev mode - already initialized and unsealed"
+VAULT_TOKEN="root"
 
-if echo "$VAULT_STATUS" | grep -q '"initialized":false'; then
-    echo "🔧 Initializing Vault..."
-    INIT_OUTPUT=$(kubectl exec -n vault-system deployment/vault -- vault operator init -key-shares=1 -key-threshold=1 -format=json)
-    UNSEAL_KEY=$(echo "$INIT_OUTPUT" | grep -o '"unseal_keys_b64":\["[^"]*"' | cut -d'"' -f4)
-    ROOT_TOKEN=$(echo "$INIT_OUTPUT" | grep -o '"root_token":"[^"]*"' | cut -d'"' -f4)
-    echo "📝 Vault initialized successfully"
-else
-    echo "ℹ️ Vault already initialized"
-fi
 
-# Check if Vault is sealed and unseal if needed
-VAULT_STATUS=$(kubectl exec -n vault-system deployment/vault -- vault status -format=json 2>/dev/null || echo '{"sealed":true}')
-if echo "$VAULT_STATUS" | grep -q '"sealed":true'; then
-    if [ -n "$UNSEAL_KEY" ]; then
-        echo "🔓 Vault is sealed, unsealing with generated key..."
-        kubectl exec -n vault-system deployment/vault -- vault operator unseal "$UNSEAL_KEY"
-    else
-        echo "⚠️ Vault is sealed but no unseal key available. Manual unsealing required."
-    fi
-else
-    echo "✅ Vault is already unsealed"
-fi
-
-# Use root token from initialization or default
-VAULT_TOKEN=${ROOT_TOKEN:-"root"}
 
 # Enable KV secrets engine if not already enabled
 echo "🔧 Enabling KV secrets engine..."
@@ -79,8 +55,5 @@ kubectl exec -n vault-system deployment/vault -- sh -c "
 "
 
 echo "✅ Vault and External Secrets setup complete!"
-if [ -n "$UNSEAL_KEY" ]; then
-    echo "🔑 Unseal Key: $UNSEAL_KEY"
-    echo "🔐 Root Token: $ROOT_TOKEN"
-    echo "⚠️ Store these credentials securely!"
-fi
+echo "🔐 Vault Token: $VAULT_TOKEN (dev mode)"
+echo "⚠️ In production, use proper Vault initialization and unsealing!"
