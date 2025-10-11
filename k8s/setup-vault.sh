@@ -12,14 +12,14 @@ fi
 
 # Deploy Vault
 echo "📦 Deploying Vault..."
-kubectl apply -f vault.yml
+kubectl apply -f k8s/vault.yml
 
 echo "⏳ Waiting for Vault to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/vault -n vault-system
 
 # Deploy External Secrets Operator
 echo "🔑 Deploying External Secrets Operator..."
-kubectl apply -f external-secrets.yml
+kubectl apply -f k8s/external-secrets.yml
 
 echo "⏳ Waiting for CRDs to be established..."
 kubectl wait --for=condition=established --timeout=300s crd/secretstores.external-secrets.io
