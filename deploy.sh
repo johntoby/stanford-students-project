@@ -41,35 +41,60 @@ echo "🔐 Setting up Vault and External Secrets..."
 chmod +x k8s/setup-vault.sh
 ./k8s/setup-vault.sh
 
+# Fix Vault secrets integration
+echo "🔧 Fixing Vault Secret Issues..."
+VAULT_POD=$(kubectl get pods -l app=vault -n vault-system -o jsonpath='{.items[0].metadata.name}')
+echo "Vault pod: $VAULT_POD"
+
+# Ensure Vault has proper secrets
+kubectl exec -n vault-system $VAULT_POD -- sh -c "
+    export VAULT_ADDR=http://127.0.0.1:8200 && 
+    export VAULT_TOKEN=root && 
+    
+    # Enable KV engine (ignore if already enabled)
+    vault secrets enable -path=secret kv-v2 2>/dev/null || echo 'KV engine already enabled' &&
+    
+    # Create database secrets
+    vault kv put secret/database username=postgres password=postgres &&
+    
+    # Verify secrets were created
+    echo 'Verifying secrets:' &&
+    vault kv get secret/database
+"
+
+# Fix vault token secret
+kubectl delete secret vault-token -n student-api --ignore-not-found
+kubectl create secret generic vault-token -n student-api --from-literal=token=root
+
 # Deploy Database first
 echo "🗄️ Deploying Database..."
 kubectl apply -f k8s/database.yml
 
-# Wait for External Secret to sync
-echo "⏳ Waiting for database credentials to sync from Vault..."
+# Force refresh ExternalSecrets
+echo "🔄 Force refreshing ExternalSecrets..."
+kubectl annotate externalsecret postgres-credentials -n student-api force-sync=$(date +%s) --overwrite || echo "postgres-credentials not found"
+
+# Wait for ExternalSecrets to create secrets
+echo "⏳ Waiting for ExternalSecrets to create database secrets..."
 for i in {1..30}; do
     if kubectl get secret postgres-secret -n student-api &>/dev/null; then
-        echo "✅ Database credentials synced successfully"
+        echo "✅ Database credentials created by ExternalSecrets"
         break
     fi
-    echo "Waiting for External Secret to sync... ($i/30)"
+    echo "Waiting for ExternalSecrets to sync... ($i/30)"
     sleep 5
 done
 
 if ! kubectl get secret postgres-secret -n student-api &>/dev/null; then
-    echo "❌ External Secret failed to sync. Checking External Secrets controller..."
-    echo "External Secrets Controller status:"
-    kubectl get pods -n external-secrets-system
+    echo "❌ ExternalSecrets failed to create database secrets. Checking status..."
+    echo "ExternalSecret postgres-credentials status:"
+    kubectl describe externalsecret postgres-credentials -n student-api 2>/dev/null || echo "Not found"
     echo ""
     echo "External Secrets Controller logs:"
-    kubectl logs -n external-secrets-system -l app=external-secrets-controller --tail=20
+    kubectl logs -l app=external-secrets-controller -n external-secrets-system --tail=10
     echo ""
-    echo "⚠️ Creating database secret manually as fallback..."
-    kubectl create secret generic postgres-secret -n student-api \
-        --from-literal=POSTGRES_USER=postgres \
-        --from-literal=POSTGRES_PASSWORD=postgres \
-        --dry-run=client -o yaml | kubectl apply -f -
-    echo "✅ Manual secret created successfully"
+    echo "❌ Database secrets not created automatically. Please check ExternalSecrets configuration."
+    exit 1
 fi
 
 echo "⏳ Waiting for PostgreSQL to be ready..."
@@ -97,24 +122,30 @@ kubectl wait --for=condition=ready --timeout=120s pod -l app=postgres -n student
 echo "🚀 Deploying Application..."
 kubectl apply -f k8s/application.yml
 
-# Wait for app credentials to sync
-echo "⏳ Waiting for app credentials to sync from Vault..."
-for i in {1..20}; do
+# Force refresh app ExternalSecrets
+kubectl annotate externalsecret app-credentials -n student-api force-sync=$(date +%s) --overwrite || echo "app-credentials not found"
+
+# Wait for ExternalSecrets to create app secrets
+echo "⏳ Waiting for ExternalSecrets to create app secrets..."
+for i in {1..30}; do
     if kubectl get secret app-secret -n student-api &>/dev/null; then
-        echo "✅ App credentials synced successfully"
+        echo "✅ App credentials created by ExternalSecrets"
         break
     fi
-    echo "Waiting for app External Secret to sync... ($i/20)"
-    sleep 3
+    echo "Waiting for ExternalSecrets to sync... ($i/30)"
+    sleep 5
 done
 
 if ! kubectl get secret app-secret -n student-api &>/dev/null; then
-    echo "⚠️ Creating app secret manually as fallback..."
-    kubectl create secret generic app-secret -n student-api \
-        --from-literal=DB_USER=postgres \
-        --from-literal=DB_PASSWORD=postgres \
-        --dry-run=client -o yaml | kubectl apply -f -
-    echo "✅ Manual app secret created successfully"
+    echo "❌ ExternalSecrets failed to create app secrets. Checking status..."
+    echo "ExternalSecret app-credentials status:"
+    kubectl describe externalsecret app-credentials -n student-api 2>/dev/null || echo "Not found"
+    echo ""
+    echo "External Secrets Controller logs:"
+    kubectl logs -l app=external-secrets-controller -n external-secrets-system --tail=10
+    echo ""
+    echo "❌ App secrets not created automatically. Please check ExternalSecrets configuration."
+    exit 1
 fi
 
 echo "⏳ Waiting for API to be ready..."
