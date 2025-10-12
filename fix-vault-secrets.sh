@@ -44,30 +44,31 @@ echo "5. 🔄 Force refreshing ExternalSecrets..."
 kubectl annotate externalsecret postgres-credentials -n student-api force-sync=$(date +%s) --overwrite || echo "postgres-credentials not found"
 kubectl annotate externalsecret app-credentials -n student-api force-sync=$(date +%s) --overwrite || echo "app-credentials not found"
 
-# 6. Wait for secrets to be created
-echo "6. ⏳ Waiting for secrets to be created..."
-for i in {1..20}; do
+# 6. Wait for secrets to be created by ExternalSecrets
+echo "6. ⏳ Waiting for ExternalSecrets to create secrets..."
+for i in {1..30}; do
     if kubectl get secret postgres-secret -n student-api &>/dev/null && kubectl get secret app-secret -n student-api &>/dev/null; then
-        echo "✅ Both secrets created successfully"
+        echo "✅ Both secrets created successfully by ExternalSecrets"
         break
     fi
-    echo "Waiting for secrets... ($i/20)"
-    sleep 3
+    echo "Waiting for ExternalSecrets to sync... ($i/30)"
+    sleep 5
 done
 
-# 7. Create manual fallback if ExternalSecrets fail
-if ! kubectl get secret postgres-secret -n student-api &>/dev/null; then
-    echo "⚠️ Creating postgres-secret manually..."
-    kubectl create secret generic postgres-secret -n student-api \
-        --from-literal=POSTGRES_USER=postgres \
-        --from-literal=POSTGRES_PASSWORD=postgres
-fi
-
-if ! kubectl get secret app-secret -n student-api &>/dev/null; then
-    echo "⚠️ Creating app-secret manually..."
-    kubectl create secret generic app-secret -n student-api \
-        --from-literal=DB_USER=postgres \
-        --from-literal=DB_PASSWORD=postgres
+# 7. Check ExternalSecret status if secrets not created
+if ! kubectl get secret postgres-secret -n student-api &>/dev/null || ! kubectl get secret app-secret -n student-api &>/dev/null; then
+    echo "❌ ExternalSecrets failed to create secrets. Checking status..."
+    echo "ExternalSecret postgres-credentials status:"
+    kubectl describe externalsecret postgres-credentials -n student-api 2>/dev/null || echo "Not found"
+    echo ""
+    echo "ExternalSecret app-credentials status:"
+    kubectl describe externalsecret app-credentials -n student-api 2>/dev/null || echo "Not found"
+    echo ""
+    echo "External Secrets Controller logs:"
+    kubectl logs -l app=external-secrets-controller -n external-secrets-system --tail=10
+    echo ""
+    echo "❌ Secrets not created automatically. Please check ExternalSecrets configuration."
+    exit 1
 fi
 
 # 8. Restart deployments
@@ -78,5 +79,11 @@ kubectl rollout restart deployment/stanford-api -n student-api 2>/dev/null || ec
 echo "✅ Vault secrets fix complete!"
 echo ""
 echo "📊 Final status:"
+echo "Secrets (created by ExternalSecrets):"
 kubectl get secrets -n student-api
+echo ""
+echo "ExternalSecrets status:"
+kubectl get externalsecrets -n student-api
+echo ""
+echo "Pods:"
 kubectl get pods -n student-api
