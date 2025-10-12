@@ -97,8 +97,39 @@ kubectl wait --for=condition=ready --timeout=120s pod -l app=postgres -n student
 echo "🚀 Deploying Application..."
 kubectl apply -f k8s/application.yml
 
+# Wait for app credentials to sync
+echo "⏳ Waiting for app credentials to sync from Vault..."
+for i in {1..20}; do
+    if kubectl get secret app-secret -n student-api &>/dev/null; then
+        echo "✅ App credentials synced successfully"
+        break
+    fi
+    echo "Waiting for app External Secret to sync... ($i/20)"
+    sleep 3
+done
+
+if ! kubectl get secret app-secret -n student-api &>/dev/null; then
+    echo "⚠️ Creating app secret manually as fallback..."
+    kubectl create secret generic app-secret -n student-api \
+        --from-literal=DB_USER=postgres \
+        --from-literal=DB_PASSWORD=postgres \
+        --dry-run=client -o yaml | kubectl apply -f -
+    echo "✅ Manual app secret created successfully"
+fi
+
 echo "⏳ Waiting for API to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/stanford-api -n student-api
+if ! kubectl wait --for=condition=available --timeout=300s deployment/stanford-api -n student-api; then
+    echo "❌ API deployment failed. Checking status..."
+    echo "Deployment status:"
+    kubectl describe deployment stanford-api -n student-api
+    echo ""
+    echo "Pod status:"
+    kubectl get pods -l app=stanford-api -n student-api
+    echo ""
+    echo "Pod logs:"
+    kubectl logs -l app=stanford-api -n student-api --tail=50
+    exit 1
+fi
 
 # Wait for application pod to be ready
 echo "⏳ Waiting for API pod to be ready..."
