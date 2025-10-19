@@ -1,0 +1,15 @@
+dependencies:
+- name: external-secrets
+  repository: file://../external-secrets
+  version: 0.1.0
+- name: vault
+  repository: file://../vault
+  version: 0.1.0
+- name: postgresql
+  repository: file://../postgresql
+  version: 0.1.0
+- name: stanford-api
+  repository: file://../stanford-api
+  version: 0.1.0
+digest: sha256:51747512e15be231ecc67fae2a3fbe90fcca28a11fcef9ff114c606999a44f31
+generated: "2025-10-19T16:48:59.68773833Z"
