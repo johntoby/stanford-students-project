@@ -1,5 +1,8 @@
 enabled: true
 
+global:
+  namespace: student-api
+
 image:
   repository: ghcr.io/external-secrets/external-secrets
   tag: v0.9.11
