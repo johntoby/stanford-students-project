@@ -4,6 +4,11 @@ set -e
 
 echo "🚀 Deploying Stanford Students Stack with Helm..."
 
+# Clean up existing CRDs if they exist
+echo "🧹 Cleaning up existing CRDs..."
+kubectl delete crd secretstores.external-secrets.io --ignore-not-found=true
+kubectl delete crd externalsecrets.external-secrets.io --ignore-not-found=true
+
 # Update dependencies
 echo "📦 Updating Helm dependencies..."
 cd stanford-students-stack
