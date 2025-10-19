@@ -83,10 +83,47 @@ make --version
 
 ## Running the API
 
+### Option 1: Using Helm Charts (Kubernetes - Recommended for Production)
 
+#### Prerequisites:
+- Kubernetes cluster (minikube, kind, or cloud provider)
+- Helm 3.x installed
+- kubectl configured
 
+#### Quick Deployment:
+```bash
+# Deploy the entire stack with Helm
+cd helm
+chmod +x deploy.sh
+./deploy.sh
+```
 
-### Option 1: Using Make (Recommended)
+#### Manual Helm Deployment:
+```bash
+# Update dependencies
+cd helm/stanford-students-stack
+helm dependency update
+cd ..
+
+# Deploy the stack
+helm install stanford-students-stack ./stanford-students-stack \
+  --namespace student-api \
+  --create-namespace \
+  --wait
+
+# Check status
+kubectl get pods -n student-api
+```
+
+#### Cleanup:
+```bash
+cd helm
+./cleanup.sh
+```
+
+**Note:** See [helm/README.md](helm/README.md) for detailed Helm deployment instructions.
+
+### Option 2: Using Make (Docker - Recommended for Development)
 
 
 #### Quick Start:
@@ -133,7 +170,7 @@ The `run-api` target automatically handles dependencies in this order:
 2. **Check Migrations**: Verifies if migrations are applied (runs if needed)
 3. **Start API**: Uses docker-compose to start the API container
 
-### Option 2: Using Docker Compose
+### Option 3: Using Docker Compose
 
 ```bash
 # Start all services
@@ -143,7 +180,7 @@ docker-compose up --build
 docker-compose down
 ```
 
-### Option 3: Manual Setup (Local Development)
+### Option 4: Manual Setup (Local Development)
 
 1. Start PostgreSQL database
 2. Run: `go run main.go`

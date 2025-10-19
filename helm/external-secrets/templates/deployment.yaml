@@ -1,0 +1,64 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets
+  namespace: external-secrets-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-secrets-controller
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "create", "update", "patch", "watch", "delete"]
+- apiGroups: ["external-secrets.io"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: external-secrets-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: external-secrets-controller
+subjects:
+- kind: ServiceAccount
+  name: external-secrets
+  namespace: external-secrets-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-secrets-controller
+  namespace: external-secrets-system
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: external-secrets-controller
+  template:
+    metadata:
+      labels:
+        app: external-secrets-controller
+    spec:
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      serviceAccountName: external-secrets
+      containers:
+      - name: controller
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - --metrics-addr=:8080
+        - --enable-leader-election
+        ports:
+        - containerPort: 8080
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+{{- end }}

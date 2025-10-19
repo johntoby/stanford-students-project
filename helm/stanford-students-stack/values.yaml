@@ -1,0 +1,26 @@
+global:
+  namespace: student-api
+
+external-secrets:
+  enabled: true
+
+vault:
+  enabled: true
+
+postgresql:
+  enabled: true
+
+stanford-api:
+  enabled: true
+  image:
+    repository: johntoby/stanford-students-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"

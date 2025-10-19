@@ -1,0 +1,19 @@
+enabled: true
+
+image:
+  repository: hashicorp/vault
+  tag: 1.15.2
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+dev:
+  enabled: true
+  rootToken: "root"
+
+nodeSelector:
+  type: dependent_services
+
+service:
+  type: ClusterIP
+  port: 8200
