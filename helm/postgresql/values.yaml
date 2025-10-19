@@ -1,5 +1,8 @@
 enabled: true
 
+global:
+  namespace: student-api
+
 image:
   repository: postgres
   tag: 15-alpine
