@@ -17,7 +17,7 @@ cd ..
 
 # Install CRDs first
 echo "📋 Installing External Secrets CRDs..."
-kubectl apply -f external-secrets/templates/crds.yaml
+kubectl apply -f crds.yaml
 
 # Wait for CRDs to be ready
 echo "⏳ Waiting for CRDs to be ready..."
