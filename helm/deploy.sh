@@ -15,6 +15,14 @@ cd stanford-students-stack
 helm dependency update
 cd ..
 
+# Install CRDs first
+echo "📋 Installing External Secrets CRDs..."
+kubectl apply -f external-secrets/templates/crds.yaml
+
+# Wait for CRDs to be ready
+echo "⏳ Waiting for CRDs to be ready..."
+sleep 5
+
 # Deploy the stack
 echo "🔧 Installing/Upgrading Stanford Students Stack..."
 helm upgrade --install stanford-students-stack ./stanford-students-stack \
