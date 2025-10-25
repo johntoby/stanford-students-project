@@ -67,13 +67,7 @@ helm dependency update
 cd ..
 
 print_status "Cleaning up any existing External Secrets CRDs..."
-kubectl delete crd --ignore-not-found=true \
-    acraccesstokens.generators.external-secrets.io \
-    clustersecretstores.external-secrets.io \
-    secretstores.external-secrets.io \
-    externalsecrets.external-secrets.io \
-    clusterpushsecrets.external-secrets.io \
-    pushsecrets.external-secrets.io
+kubectl get crd | grep external-secrets.io | awk '{print $1}' | xargs -r kubectl delete crd --ignore-not-found=true
 
 print_status "Installing External Secrets Operator..."
 helm upgrade --install external-secrets external-secrets/external-secrets \
