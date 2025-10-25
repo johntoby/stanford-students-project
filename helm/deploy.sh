@@ -32,7 +32,8 @@ fi
 log "📁 Creating namespaces (idempotent)..."
 kubectl create namespace "$VAULT_NS" --dry-run=client -o yaml | kubectl apply -f -
 kubectl create namespace "$EXTERNAL_SECRETS_NS" --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+# Delete existing namespace to avoid ownership conflicts
+kubectl delete namespace "$NAMESPACE" --ignore-not-found
 
 log "📦 Adding Helm repositories..."
 helm repo add hashicorp https://helm.releases.hashicorp.com || true
@@ -117,6 +118,7 @@ kubectl create secret generic vault-token -n "$NAMESPACE" --from-literal=token=r
 log "🚀 Deploying Stanford Students Stack Helm chart..."
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
+    --create-namespace \
     --timeout=10m \
     --wait
 
