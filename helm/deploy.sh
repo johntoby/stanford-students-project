@@ -66,6 +66,9 @@ cd "$CHART_PATH"
 helm dependency update
 cd ..
 
+print_status "Installing External Secrets CRDs..."
+kubectl apply -f https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml
+
 print_status "Creating namespace if it doesn't exist..."
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
