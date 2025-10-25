@@ -138,52 +138,6 @@ for i in {1..30}; do
     sleep 5
 done
 
-# --- after: helm upgrade --install external-secrets ... --wait
-
-# 1) Make sure CRDs are present: extract CRDs from the chart and apply them explicitly
-TMP_CHART_DIR=$(mktemp -d)
-helm pull external-secrets/external-secrets --untar --untardir "$TMP_CHART_DIR"
-CRDS_DIR="$TMP_CHART_DIR/external-secrets/crds"
-if [ -d "$CRDS_DIR" ]; then
-  echo "📥 Applying External Secrets CRDs from chart..."
-  kubectl apply -f "$CRDS_DIR"
-else
-  echo "⚠️ CRDs directory not found in pulled chart ($CRDS_DIR). Showing chart tree for debugging:"
-  find "$TMP_CHART_DIR" -maxdepth 3 -type f -print
-fi
-
-# 2) Wait until the core CRDs exist and are Established (robust check)
-NEEDED_CRDS=(
-  "externalsecrets.external-secrets.io"
-  "secretstores.external-secrets.io"
-  "clustersecretstores.external-secrets.io"
-)
-for CRD in "${NEEDED_CRDS[@]}"; do
-  echo "⏳ waiting for CRD $CRD to appear..."
-  for i in {1..60}; do
-    if kubectl get crd "$CRD" &>/dev/null; then
-      echo "✔ CRD $CRD found, waiting for Established..."
-      kubectl wait --for=condition=established --timeout=120s "crd/$CRD" && break
-    fi
-    sleep 2
-  done
-  if ! kubectl get crd "$CRD" &>/dev/null; then
-    echo "❌ CRD $CRD did not appear, aborting."
-    kubectl get crd | grep external || true
-    exit 1
-  fi
-done
-
-# 3) Fix API version mismatches inside your app chart (in-place; creates a backup)
-#    Replace v1beta1 with v1 for external-secrets GVKs (safe for most modern ESO charts).
-echo "🔧 Patching helm chart manifests to use external-secrets.io/v1 if needed..."
-CHART_BACKUP="${CHART_PATH}_backup_$(date +%s)"
-cp -r "$CHART_PATH" "$CHART_BACKUP"
-grep -RIl "external-secrets.io/v1beta1" "$CHART_PATH" 2>/dev/null | while read -r f; do
-  echo " → Updating apiVersion in $f"
-  sed -i 's/external-secrets.io\/v1beta1/external-secrets.io\/v1/g' "$f"
-done || true
-
 
 log "⏳ Waiting for PostgreSQL to be ready..."
 kubectl wait --for=condition=available --timeout=120s deployment/postgres -n "$NAMESPACE" || true
