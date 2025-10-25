@@ -75,6 +75,10 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
     --create-namespace \
     --wait
 
+print_status "Waiting for External Secrets CRDs to be available..."
+kubectl wait --for condition=established --timeout=300s crd/externalsecrets.external-secrets.io
+kubectl wait --for condition=established --timeout=300s crd/secretstores.external-secrets.io
+
 print_status "Installing Vault..."
 helm upgrade --install vault hashicorp/vault \
     --namespace vault-system \
