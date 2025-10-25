@@ -52,6 +52,10 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 echo "⏳ Waiting for External Secrets to be ready..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=external-secrets -n external-secrets-system --timeout=300s
 
+echo "⏳ Waiting for External Secrets CRDs..."
+kubectl wait --for condition=Established --timeout=300s crd/externalsecrets.external-secrets.io
+kubectl wait --for condition=Established --timeout=300s crd/secretstores.external-secrets.io
+
 echo "⏳ Waiting for Vault to be ready..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n vault-system --timeout=300s
 
