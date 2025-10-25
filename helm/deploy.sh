@@ -66,6 +66,15 @@ cd "$CHART_PATH"
 helm dependency update
 cd ..
 
+print_status "Cleaning up any existing External Secrets CRDs..."
+kubectl delete crd --ignore-not-found=true \
+    acraccesstokens.generators.external-secrets.io \
+    clustersecretstores.external-secrets.io \
+    secretstores.external-secrets.io \
+    externalsecrets.external-secrets.io \
+    clusterpushsecrets.external-secrets.io \
+    pushsecrets.external-secrets.io
+
 print_status "Installing External Secrets Operator..."
 helm upgrade --install external-secrets external-secrets/external-secrets \
     --namespace external-secrets-system \
