@@ -34,6 +34,7 @@ kubectl create namespace "$VAULT_NS" --dry-run=client -o yaml | kubectl apply -f
 kubectl create namespace "$EXTERNAL_SECRETS_NS" --dry-run=client -o yaml | kubectl apply -f -
 # Delete existing namespace to avoid ownership conflicts
 kubectl delete namespace "$NAMESPACE" --ignore-not-found
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 log "📦 Adding Helm repositories..."
 helm repo add hashicorp https://helm.releases.hashicorp.com || true
