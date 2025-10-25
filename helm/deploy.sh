@@ -34,7 +34,11 @@ kubectl create namespace "$VAULT_NS" --dry-run=client -o yaml | kubectl apply -f
 kubectl create namespace "$EXTERNAL_SECRETS_NS" --dry-run=client -o yaml | kubectl apply -f -
 # Delete existing namespace to avoid ownership conflicts
 kubectl delete namespace "$NAMESPACE" --ignore-not-found
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install stanford-students-stack "$CHART_PATH" \
+  --namespace student-api \
+  --create-namespace \
+  --wait --timeout 10m
 
 log "📦 Adding Helm repositories..."
 helm repo add hashicorp https://helm.releases.hashicorp.com || true
