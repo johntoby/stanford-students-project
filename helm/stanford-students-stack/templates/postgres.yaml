@@ -1,11 +1,23 @@
-{{- if .Values.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: {{ .Values.global.namespace | default "student-api" }}
+  namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: 1
   selector:
     matchLabels:
       app: postgres
@@ -14,16 +26,15 @@ spec:
       labels:
         app: postgres
     spec:
-      {{- if .Values.nodeSelector }}
+      {{- with .Values.database.nodeSelector }}
       nodeSelector:
-        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
       - name: postgres
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: postgres:15-alpine
         ports:
-        - containerPort: {{ .Values.service.port }}
+        - containerPort: 5432
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -41,10 +52,8 @@ spec:
               name: postgres-config
               key: POSTGRES_DB
         volumeMounts:
-        {{- if .Values.persistence.enabled }}
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
-        {{- end }}
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
         livenessProbe:
@@ -64,15 +73,22 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
-      {{- if .Values.persistence.enabled }}
       - name: postgres-storage
         persistentVolumeClaim:
           claimName: postgres-pvc
-      {{- else }}
-      - name: postgres-storage
-        emptyDir: {}
-      {{- end }}
       - name: init-script
         configMap:
           name: postgres-init-script
-{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP

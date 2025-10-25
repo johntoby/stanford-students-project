@@ -1,22 +1,14 @@
 global:
   namespace: student-api
 
-external-secrets:
-  enabled: true
-
-vault:
-  enabled: true
-
-postgresql:
-  enabled: true
-
-stanford-api:
-  enabled: true
+app:
+  name: stanford-api
   image:
     repository: johntoby/stanford-students-api
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 2
+  port: 8080
   resources:
     requests:
       memory: "128Mi"
@@ -24,3 +16,43 @@ stanford-api:
     limits:
       memory: "256Mi"
       cpu: "200m"
+  nodeSelector:
+    type: application
+  config:
+    dbHost: postgres-service
+    dbPort: "5432"
+    dbName: stanford_students
+    logLevel: info
+
+database:
+  config:
+    dbName: stanford_students
+  nodeSelector:
+    type: database
+
+vault:
+  enabled: true
+  server:
+    dev:
+      enabled: true
+      devRootToken: "root"
+    nodeSelector:
+      type: dependent_services
+  injector:
+    enabled: false
+
+postgresql:
+  enabled: false
+
+external-secrets:
+  enabled: true
+  nodeSelector:
+    type: dependent_services
+
+secrets:
+  vault:
+    server: "http://vault-service.vault-system.svc.cluster.local:8200"
+    token: "root"
+  database:
+    username: postgres
+    password: postgres

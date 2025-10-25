@@ -1,22 +1,22 @@
-{{- if .Values.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stanford-api
-  namespace: {{ .Values.global.namespace | default "student-api" }}
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.global.namespace }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: {{ .Values.app.replicas }}
   selector:
     matchLabels:
-      app: stanford-api
+      app: {{ .Values.app.name }}
   template:
     metadata:
       labels:
-        app: stanford-api
+        app: {{ .Values.app.name }}
     spec:
-      {{- if .Values.nodeSelector }}
+      {{- with .Values.app.nodeSelector }}
       nodeSelector:
-        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
       - name: migration
@@ -76,11 +76,11 @@ spec:
           "
           echo "Migrations completed successfully"
       containers:
-      - name: stanford-api
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      - name: {{ .Values.app.name }}
+        image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+        imagePullPolicy: {{ .Values.app.image.pullPolicy }}
         ports:
-        - containerPort: {{ .Values.service.port }}
+        - containerPort: {{ .Values.app.port }}
         env:
         - name: DB_HOST
           valueFrom:
@@ -119,16 +119,30 @@ spec:
               key: LOG_LEVEL
         livenessProbe:
           httpGet:
-            path: {{ .Values.probes.liveness.path }}
-            port: {{ .Values.service.port }}
-          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            path: /healthcheck
+            port: {{ .Values.app.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: {{ .Values.probes.readiness.path }}
-            port: {{ .Values.service.port }}
-          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            path: /healthcheck
+            port: {{ .Values.app.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        {{- with .Values.app.resources }}
         resources:
-          {{- toYaml .Values.resources | nindent 10 }}
-{{- end }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stanford-api-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: {{ .Values.app.name }}
+  ports:
+  - port: {{ .Values.app.port }}
+    targetPort: {{ .Values.app.port }}
+  type: ClusterIP

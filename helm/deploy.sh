@@ -2,45 +2,118 @@
 
 set -e
 
-echo "🚀 Deploying Stanford Students Stack with Helm..."
+echo "🚀 Starting Stanford Students API Helm deployment..."
 
-# Clean up existing resources if they exist
-echo "🧹 Cleaning up existing resources..."
-kubectl delete crd secretstores.external-secrets.io --ignore-not-found=true
-kubectl delete crd externalsecrets.external-secrets.io --ignore-not-found=true
-kubectl delete clusterrole external-secrets-controller --ignore-not-found=true
-kubectl delete clusterrolebinding external-secrets-controller --ignore-not-found=true
-kubectl delete namespace external-secrets-system --ignore-not-found=true
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Update dependencies
-echo "📦 Updating Helm dependencies..."
-cd stanford-students-stack
+# Configuration
+NAMESPACE="student-api"
+RELEASE_NAME="stanford-students-stack"
+CHART_PATH="./stanford-students-stack"
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if helm is installed
+if ! command -v helm &> /dev/null; then
+    print_error "Helm is not installed. Please install Helm first."
+    exit 1
+fi
+
+# Check if kubectl is installed
+if ! command -v kubectl &> /dev/null; then
+    print_error "kubectl is not installed. Please install kubectl first."
+    exit 1
+fi
+
+# Check if Kubernetes cluster is accessible
+if ! kubectl cluster-info &> /dev/null; then
+    print_error "Cannot connect to Kubernetes cluster. Please check your kubeconfig."
+    exit 1
+fi
+
+print_status "Adding required Helm repositories..."
+
+# Add Helm repositories
+helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
+helm repo add hashicorp https://helm.releases.hashicorp.com 2>/dev/null || true
+helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
+
+print_status "Updating Helm repositories..."
+helm repo update
+
+print_status "Updating chart dependencies..."
+cd "$CHART_PATH"
 helm dependency update
 cd ..
 
-# Install CRDs first
-echo "📋 Installing External Secrets CRDs..."
-kubectl apply -f crds.yaml
+print_status "Creating namespace if it doesn't exist..."
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-# Wait for CRDs to be ready
-echo "⏳ Waiting for CRDs to be ready..."
-sleep 5
+print_status "Installing/Upgrading the Stanford Students Stack..."
+helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
+    --namespace "$NAMESPACE" \
+    --wait \
+    --timeout=10m \
+    --create-namespace
 
-# Deploy the stack
-echo "🔧 Installing/Upgrading Stanford Students Stack..."
-helm upgrade --install stanford-students-stack ./stanford-students-stack \
-  --namespace student-api \
-  --create-namespace \
-  --wait \
-  --timeout 10m
+print_success "Helm deployment completed!"
 
-echo "✅ Deployment completed successfully!"
+print_status "Waiting for Vault to be ready..."
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n vault-system --timeout=300s
 
-# Show status
-echo "📊 Checking deployment status..."
-kubectl get pods -n student-api
-kubectl get pods -n vault-system
-kubectl get pods -n external-secrets-system
+# Setup Vault secrets
+VAULT_POD=$(kubectl get pods -n vault-system -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
 
-echo "🌐 Access the application at: http://localhost:8080"
-echo "🔍 Health check: http://localhost:8080/healthcheck"
+print_status "Configuring Vault secrets..."
+kubectl exec -n vault-system "$VAULT_POD" -- vault auth -method=token token=root
+kubectl exec -n vault-system "$VAULT_POD" -- vault kv put secret/database username=postgres password=postgres
+
+print_success "Vault secrets configured!"
+
+print_status "Waiting for External Secrets Operator..."
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=external-secrets -n external-secrets-system --timeout=300s
+
+print_status "Waiting for secrets to be created..."
+kubectl wait --for=condition=Ready externalsecret postgres-credentials -n "$NAMESPACE" --timeout=300s
+kubectl wait --for=condition=Ready externalsecret app-credentials -n "$NAMESPACE" --timeout=300s
+
+print_status "Waiting for all application pods to be ready..."
+kubectl wait --for=condition=ready pod --all -n "$NAMESPACE" --timeout=300s
+
+print_status "Deployment Status:"
+echo "===================="
+kubectl get pods -n "$NAMESPACE"
+echo ""
+kubectl get svc -n "$NAMESPACE"
+echo ""
+
+print_success "🎉 Stanford Students API is now deployed!"
+print_status "Access the application:"
+echo "  - Frontend: kubectl port-forward -n $NAMESPACE svc/stanford-api-service 8080:8080"
+echo "  - Then visit: http://localhost:8080"
+echo ""
+print_status "To check logs:"
+echo "  kubectl logs -n $NAMESPACE -l app=stanford-api -f"
+echo ""
+print_status "To uninstall:"
+echo "  ./cleanup.sh"
