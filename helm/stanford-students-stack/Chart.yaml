@@ -4,16 +4,4 @@ description: A Helm chart for Stanford Students API with PostgreSQL, Vault, and 
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
-dependencies:
-  - name: postgresql
-    version: "12.12.10"
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: postgresql.enabled
-  - name: vault
-    version: "0.25.0"
-    repository: "https://helm.releases.hashicorp.com"
-    condition: vault.enabled
-  - name: external-secrets
-    version: "0.9.11"
-    repository: "https://charts.external-secrets.io"
-    condition: external-secrets.enabled
+# Dependencies are installed separately in deploy.sh

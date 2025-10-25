@@ -66,8 +66,20 @@ cd "$CHART_PATH"
 helm dependency update
 cd ..
 
-print_status "Installing External Secrets CRDs..."
-kubectl apply -f https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml
+print_status "Installing External Secrets Operator..."
+helm upgrade --install external-secrets external-secrets/external-secrets \
+    --namespace external-secrets-system \
+    --create-namespace \
+    --wait
+
+print_status "Installing Vault..."
+helm upgrade --install vault hashicorp/vault \
+    --namespace vault-system \
+    --create-namespace \
+    --set "server.dev.enabled=true" \
+    --set "server.dev.devRootToken=root" \
+    --set "injector.enabled=false" \
+    --wait
 
 print_status "Creating namespace if it doesn't exist..."
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
