@@ -111,16 +111,16 @@ kubectl exec -n "$VAULT_NS" "$VAULT_POD" -- sh -c '
   vault kv put secret/database username=postgres password=postgres || true
 '
 
-log "🔐 Creating vault token secret in namespace $NAMESPACE..."
-kubectl delete secret vault-token -n "$NAMESPACE" --ignore-not-found
-kubectl create secret generic vault-token -n "$NAMESPACE" --from-literal=token=root
-
 log "🚀 Deploying Stanford Students Stack Helm chart..."
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
     --create-namespace \
     --timeout=10m \
     --wait
+
+log "🔐 Creating vault token secret in namespace $NAMESPACE..."
+kubectl delete secret vault-token -n "$NAMESPACE" --ignore-not-found
+kubectl create secret generic vault-token -n "$NAMESPACE" --from-literal=token=root
 
 # If your chart creates ExternalSecret resources named like these, annotate to force sync
 log "🔄 Force refreshing ExternalSecrets (if present)..."
