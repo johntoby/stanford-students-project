@@ -115,6 +115,7 @@ log "🚀 Deploying Stanford Students Stack Helm chart..."
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
     --create-namespace \
+    --skip-crds \
     --timeout=10m \
     --wait
 
