@@ -1,1 +1,1 @@
-# Removed: vault-system namespace is managed by the Vault Helm chart
+# This file intentionally left empty - vault-system namespace is managed by Vault Helm chart
