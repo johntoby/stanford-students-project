@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -e
 
 echo "🚀 Starting Stanford Students API Helm deployment..."
 
@@ -8,153 +8,148 @@ echo "🚀 Starting Stanford Students API Helm deployment..."
 NAMESPACE="student-api"
 RELEASE_NAME="stanford-students-stack"
 CHART_PATH="./stanford-students-stack"
-EXTERNAL_SECRETS_NS="external-secrets-system"
-VAULT_NS="vault-system"
-
-# Helpers
-log() { echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"; }
 
 # Check prerequisites
-log "🔍 Checking prerequisites..."
+echo "🔍 Checking prerequisites..."
 if ! command -v helm &> /dev/null; then
     echo "❌ Helm is not installed"
     exit 1
 fi
+
 if ! command -v kubectl &> /dev/null; then
     echo "❌ kubectl is not installed"
     exit 1
 fi
+
 if ! kubectl cluster-info &> /dev/null; then
     echo "❌ Cannot connect to Kubernetes cluster"
     exit 1
 fi
 
-log "📁 Creating namespaces (idempotent)..."
-kubectl create namespace "$VAULT_NS" --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace "$EXTERNAL_SECRETS_NS" --dry-run=client -o yaml | kubectl apply -f -
-# Delete existing namespace to avoid ownership conflicts
-kubectl delete namespace "$NAMESPACE" --ignore-not-found
-
-log "📦 Adding Helm repositories..."
-helm repo add hashicorp https://helm.releases.hashicorp.com || true
-helm repo add external-secrets https://charts.external-secrets.io || true
+echo "[$(date -Iseconds)] 📦 Adding Helm repositories..."
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo add external-secrets https://charts.external-secrets.io
 helm repo update
 
-log "🔐 Installing Vault (dev mode for testing)..."
+echo "[$(date -Iseconds)] 📁 Creating namespaces..."
+# Create namespaces BEFORE installing Helm charts
+kubectl create namespace vault-system --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace external-secrets-system --dry-run=client -o yaml | kubectl apply -f -
+# Don't create student-api namespace here - let your chart handle it
+
+echo "[$(date -Iseconds)] 🔐 Installing Vault (dev mode for testing)..."
 helm upgrade --install vault hashicorp/vault \
-    --namespace "$VAULT_NS" \
+    --namespace vault-system \
+    --create-namespace \
     --set "server.dev.enabled=true" \
     --set "server.dev.devRootToken=root" \
     --set "injector.enabled=false" \
-    --wait
+    --wait \
+    --timeout=5m
 
-log "🔑 Installing External Secrets Operator (installCRDs=true)..."
-# Important: ensure CRDs are installed as part of the chart to avoid race conditions.
+echo "[$(date -Iseconds)] 🔑 Installing External Secrets Operator (installCRDs=true)..."
 helm upgrade --install external-secrets external-secrets/external-secrets \
-    --namespace "$EXTERNAL_SECRETS_NS" \
+    --namespace external-secrets-system \
+    --create-namespace \
     --set installCRDs=true \
-    --wait
+    --wait \
+    --timeout=5m
 
-# Wait for the External Secrets pods to be ready (use the release label if present)
-log "⏳ Waiting for External Secrets pods to be ready..."
-# Chart uses app.kubernetes.io/name=external-secrets (best-effort); fallback to release label
-if ! kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=external-secrets -n "$EXTERNAL_SECRETS_NS" --timeout=180s 2>/dev/null; then
-    kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=external-secrets -n "$EXTERNAL_SECRETS_NS" --timeout=180s
-fi
+echo "[$(date -Iseconds)] ⏳ Waiting for External Secrets pods to be ready..."
+kubectl wait --for=condition=ready pod \
+    -l app.kubernetes.io/name=external-secrets \
+    -n external-secrets-system \
+    --timeout=300s
 
-# Robust CRD check: poll until CRDs appear, then wait for Established
-CRDS_TO_WAIT=(
-  "externalsecrets.external-secrets.io"
-  "secretstores.external-secrets.io"
-  "clustersecretstores.external-secrets.io"
-)
-
-log "⏳ Waiting for External Secrets CRDs to be created and established..."
-# wait up to 300s for CRDs to appear
-CRD_APPEAR_TIMEOUT=300
-CRD_APPEAR_POLL_INTERVAL=3
-start_ts=$(date +%s)
-
-for crd in "${CRDS_TO_WAIT[@]}"; do
-  log "→ ensuring CRD ${crd} exists..."
-  while true; do
-    if kubectl get crd "$crd" &>/dev/null; then
-      log "CRD ${crd} found."
-      break
-    fi
-    now_ts=$(date +%s)
-    elapsed=$((now_ts - start_ts))
-    if [ "$elapsed" -ge "$CRD_APPEAR_TIMEOUT" ]; then
-      echo "❌ Timeout waiting for CRD ${crd} to appear (waited ${CRD_APPEAR_TIMEOUT}s)."
-      kubectl get crd || true
-      exit 1
-    fi
-    sleep $CRD_APPEAR_POLL_INTERVAL
-  done
-
-  # Once present, wait for Established condition
-  log "→ waiting for CRD ${crd} to become Established..."
-  kubectl wait --for=condition=established --timeout=180s "crd/$crd"
+echo "[$(date -Iseconds)] ⏳ Waiting for External Secrets CRDs to be created and established..."
+for crd_name in externalsecrets.external-secrets.io secretstores.external-secrets.io clustersecretstores.external-secrets.io; do
+    echo "[$(date -Iseconds)] → ensuring CRD ${crd_name} exists..."
+    for i in {1..30}; do
+        if kubectl get crd ${crd_name} &>/dev/null; then
+            echo "[$(date -Iseconds)] CRD ${crd_name} found."
+            break
+        fi
+        if [ $i -eq 30 ]; then
+            echo "❌ Timeout waiting for CRD ${crd_name}"
+            exit 1
+        fi
+        sleep 2
+    done
+    
+    echo "[$(date -Iseconds)] → waiting for CRD ${crd_name} to become Established..."
+    kubectl wait --for condition=established --timeout=120s crd/${crd_name}
 done
 
-log "⏳ Waiting for Vault to be ready..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n "$VAULT_NS" --timeout=300s
+echo "[$(date -Iseconds)] ⏳ Waiting for Vault to be ready..."
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n vault-system --timeout=300s
 
-log "🔧 Configuring Vault secrets..."
-VAULT_POD=$(kubectl get pods -n "$VAULT_NS" -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
-kubectl exec -n "$VAULT_NS" "$VAULT_POD" -- sh -c '
-  export VAULT_ADDR=http://127.0.0.1:8200
-  export VAULT_TOKEN=root
-  if ! vault secrets list | grep -q "secret/"; then
-    vault secrets enable -path=secret kv-v2 || true
-  fi
-  vault kv put secret/database username=postgres password=postgres || true
+echo "[$(date -Iseconds)] 🔧 Configuring Vault secrets..."
+VAULT_POD=$(kubectl get pods -n vault-system -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
+
+kubectl exec -n vault-system $VAULT_POD -- sh -c '
+    export VAULT_ADDR=http://127.0.0.1:8200
+    export VAULT_TOKEN=root
+    
+    # Enable KV v2 secrets engine
+    vault secrets enable -path=secret kv-v2 2>/dev/null || echo "KV engine already enabled"
+    
+    # Store database credentials
+    vault kv put secret/database username=postgres password=postgres
+    
+    # Verify
+    vault kv get secret/database
 '
 
-log "🚀 Deploying Stanford Students Stack Helm chart..."
+echo "[$(date -Iseconds)] 🚀 Deploying Stanford Students Stack Helm chart..."
+# Deploy your application chart
+# It should only create student-api namespace and resources in it
 helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
     --create-namespace \
-    --skip-crds \
     --timeout=10m \
     --wait
 
-log "🔐 Creating vault token secret in namespace $NAMESPACE..."
+echo "[$(date -Iseconds)] 🔐 Creating vault token secret for ExternalSecrets..."
 kubectl delete secret vault-token -n "$NAMESPACE" --ignore-not-found
 kubectl create secret generic vault-token -n "$NAMESPACE" --from-literal=token=root
 
-# If your chart creates ExternalSecret resources named like these, annotate to force sync
-log "🔄 Force refreshing ExternalSecrets (if present)..."
-kubectl annotate externalsecret postgres-credentials -n "$NAMESPACE" force-sync="$(date +%s)" --overwrite 2>/dev/null || true
-kubectl annotate externalsecret app-credentials -n "$NAMESPACE" force-sync="$(date +%s)" --overwrite 2>/dev/null || true
-# older versions may use 'es' shorthand; try that too (no-fail)
-kubectl annotate es postgres-credentials -n "$NAMESPACE" force-sync="$(date +%s)" --overwrite 2>/dev/null || true
-kubectl annotate es app-credentials -n "$NAMESPACE" force-sync="$(date +%s)" --overwrite 2>/dev/null || true
+echo "[$(date -Iseconds)] ⏳ Checking ExternalSecret resources..."
+kubectl get externalsecret -n "$NAMESPACE" || echo "No ExternalSecrets found yet"
+kubectl get secretstore -n "$NAMESPACE" || echo "No SecretStores found yet"
 
-log "⏳ Waiting for secrets to be created by ExternalSecrets..."
-for i in {1..30}; do
-    if kubectl get secret postgres-secret -n "$NAMESPACE" &>/dev/null && kubectl get secret app-secret -n "$NAMESPACE" &>/dev/null; then
-        log "✅ Secrets created by ExternalSecrets"
+echo "[$(date -Iseconds)] 🔄 Triggering ExternalSecrets sync..."
+sleep 5
+kubectl annotate externalsecret --all -n "$NAMESPACE" force-sync=$(date +%s) --overwrite || true
+
+echo "[$(date -Iseconds)] ⏳ Waiting for secrets to be created..."
+for i in {1..60}; do
+    POSTGRES_SECRET=$(kubectl get secret postgres-secret -n "$NAMESPACE" 2>/dev/null && echo "✓" || echo "✗")
+    APP_SECRET=$(kubectl get secret app-secret -n "$NAMESPACE" 2>/dev/null && echo "✓" || echo "✗")
+    
+    if [ "$POSTGRES_SECRET" = "✓" ] && [ "$APP_SECRET" = "✓" ]; then
+        echo "[$(date -Iseconds)] ✅ All secrets created"
         break
     fi
-    log "Waiting for ExternalSecrets to sync... ($i/30)"
-    sleep 5
+    
+    if [ $i -eq 60 ]; then
+        echo "⚠️  Secrets not ready within timeout"
+        kubectl describe externalsecret -n "$NAMESPACE"
+    fi
+    
+    echo "Waiting... postgres: $POSTGRES_SECRET, app: $APP_SECRET ($i/60)"
+    sleep 3
 done
 
-
-log "⏳ Waiting for PostgreSQL to be ready..."
-kubectl wait --for=condition=available --timeout=120s deployment/postgres -n "$NAMESPACE" || true
-
-log "⏳ Waiting for API to be ready..."
+echo "[$(date -Iseconds)] ⏳ Waiting for deployments..."
+kubectl wait --for=condition=available --timeout=180s deployment/postgres -n "$NAMESPACE" || true
 kubectl wait --for=condition=available --timeout=300s deployment/stanford-api -n "$NAMESPACE" || true
 
-log "✅ Deployment complete!"
 echo ""
-log "📊 Status:"
-kubectl get pods -n "$NAMESPACE" || true
+echo "✅ Deployment complete!"
 echo ""
-kubectl get svc -n "$NAMESPACE" || true
+echo "📊 Status:"
+kubectl get pods -n "$NAMESPACE"
 echo ""
-log "🎉 Stanford Students API is deployed!"
-log "Access: kubectl port-forward -n $NAMESPACE svc/stanford-api-service 8080:8080"
-log "Cleanup: ./cleanup.sh"
+kubectl get svc -n "$NAMESPACE"
+echo ""
+echo "🎉 API Access: kubectl port-forward -n $NAMESPACE svc/stanford-api-service 8080:8080"
