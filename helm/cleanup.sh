@@ -14,4 +14,4 @@ kubectl delete namespace external-secrets-system --ignore-not-found=true
 kubectl delete crd secretstores.external-secrets.io --ignore-not-found=true
 kubectl delete crd externalsecrets.external-secrets.io --ignore-not-found=true
 
-echo "✅ Cleanup completed!"
+echo "✅ Cleanup completed!" Enjoy
