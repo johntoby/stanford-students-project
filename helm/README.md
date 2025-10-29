@@ -1,184 +1,163 @@
-# Stanford Students API - Helm Charts
+# Stanford Students API - Helm Chart
 
-This directory contains Helm charts for deploying the Stanford Students API and all its dependencies on Kubernetes.
+This directory contains the Helm chart for deploying the Stanford Students API with all its dependencies including PostgreSQL, Vault, and External Secrets Operator.
 
-## Architecture
+## Quick Start
 
-The deployment consists of:
-- **External Secrets Operator**: Manages secrets from HashiCorp Vault
-- **HashiCorp Vault**: Secrets management (dev mode)
-- **PostgreSQL**: Database for student records
-- **Stanford API**: The main REST API application
-
-## Prerequisites
-
+### Prerequisites
 - Kubernetes cluster (minikube, kind, or cloud provider)
 - Helm 3.x installed
 - kubectl configured to access your cluster
 
-## Quick Start
-
-### 1. Deploy the entire stack:
+### One-Click Deployment
 ```bash
 cd helm
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-### 2. Access the application:
-- Frontend: `http://localhost:8080`
-- API: `http://localhost:8080/api/v1`
-- Health Check: `http://localhost:8080/healthcheck`
-
-### 3. Clean up:
+### One-Click Cleanup
 ```bash
+cd helm
 chmod +x cleanup.sh
 ./cleanup.sh
 ```
 
 ## Manual Deployment
 
-### Step-by-step deployment:
-
-1. **Update dependencies:**
-   ```bash
-   cd stanford-students-stack
-   helm dependency update
-   cd ..
-   ```
-
-2. **Deploy the stack:**
-   ```bash
-   helm install stanford-students-stack ./stanford-students-stack \
-     --namespace student-api \
-     --create-namespace \
-     --wait
-   ```
-
-3. **Check deployment status:**
-   ```bash
-   kubectl get pods -n student-api
-   kubectl get pods -n vault-system
-   kubectl get pods -n external-secrets-system
-   ```
-
-## Individual Chart Deployment
-
-You can also deploy individual components:
-
+### 1. Add Required Repositories
 ```bash
-# Deploy External Secrets Operator
-helm install external-secrets ./external-secrets
-
-# Deploy Vault
-helm install vault ./vault
-
-# Deploy PostgreSQL
-helm install postgresql ./postgresql
-
-# Deploy Stanford API
-helm install stanford-api ./stanford-api
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo update
 ```
 
-## Configuration
-
-### Customizing Values
-
-Create a custom values file:
-
-```yaml
-# custom-values.yaml
-stanford-api:
-  replicas: 3
-  image:
-    tag: "v2.0.0"
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "200m"
-
-postgresql:
-  persistence:
-    size: 5Gi
+### 2. Update Dependencies
+```bash
+cd stanford-students-stack
+helm dependency update
+cd ..
 ```
 
-Deploy with custom values:
+### 3. Deploy the Stack
 ```bash
-helm upgrade --install stanford-students-stack ./stanford-students-stack \
-  -f custom-values.yaml \
+helm install stanford-students-stack ./stanford-students-stack \
   --namespace student-api \
-  --create-namespace
+  --create-namespace \
+  --wait
 ```
 
-### Environment-specific Deployments
-
-For different environments, create separate values files:
-
+### 4. Setup Vault Secrets
 ```bash
-# Development
-helm install stanford-dev ./stanford-students-stack \
-  -f values-dev.yaml \
-  --namespace student-api-dev
+# Wait for Vault to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n vault-system --timeout=300s
 
-# Production
-helm install stanford-prod ./stanford-students-stack \
-  -f values-prod.yaml \
-  --namespace student-api-prod
+# Get Vault pod name
+VAULT_POD=$(kubectl get pods -n vault-system -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
+
+# Configure secrets
+kubectl exec -n vault-system $VAULT_POD -- vault auth -method=token token=root
+kubectl exec -n vault-system $VAULT_POD -- vault kv put secret/database username=postgres password=postgres
 ```
 
 ## Chart Structure
 
 ```
-helm/
-├── stanford-students-stack/     # Umbrella chart
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   └── charts/                  # Dependencies
-├── external-secrets/            # External Secrets Operator
-├── vault/                       # HashiCorp Vault
-├── postgresql/                  # PostgreSQL Database
-├── stanford-api/                # Stanford API Application
-├── deploy.sh                    # Deployment script
-├── cleanup.sh                   # Cleanup script
-└── README.md                    # This file
+stanford-students-stack/
+├── Chart.yaml              # Chart metadata and dependencies
+├── values.yaml             # Default configuration values
+├── charts/                 # Dependency charts (auto-generated)
+└── templates/
+    ├── _helpers.tpl        # Template helpers
+    ├── namespace.yaml      # Main namespace
+    ├── vault-namespace.yaml # Vault namespace
+    ├── configmap.yaml      # Configuration maps
+    ├── secrets.yaml        # External secrets configuration
+    ├── postgres.yaml       # PostgreSQL deployment
+    └── application.yaml    # Main application deployment
 ```
 
-## Troubleshooting
+## Configuration
 
-### Check pod status:
+### Key Values
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `global.namespace` | Main application namespace | `student-api` |
+| `app.image.repository` | Application image repository | `johntoby/stanford-students-api` |
+| `app.image.tag` | Application image tag | `latest` |
+| `app.replicas` | Number of application replicas | `2` |
+| `vault.enabled` | Enable Vault deployment | `true` |
+| `external-secrets.enabled` | Enable External Secrets Operator | `true` |
+
+### Custom Values File
+Create a custom values file to override defaults:
+
+```yaml
+# custom-values.yaml
+app:
+  replicas: 3
+  image:
+    tag: "v1.2.0"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+```
+
+Deploy with custom values:
 ```bash
-kubectl get pods -A
-kubectl describe pod <pod-name> -n <namespace>
+helm install stanford-students-stack ./stanford-students-stack \
+  --namespace student-api \
+  --create-namespace \
+  --values custom-values.yaml
 ```
 
-### View logs:
+## Accessing the Application
+
+### Port Forward
 ```bash
-kubectl logs -f deployment/stanford-api -n student-api
-kubectl logs -f deployment/postgres -n student-api
-kubectl logs -f deployment/vault -n vault-system
+kubectl port-forward -n student-api svc/stanford-api-service 8080:8080
 ```
 
-### Check secrets:
+Then visit: http://localhost:8080
+
+### Using LoadBalancer (Cloud environments)
+Update the service type in values.yaml:
+```yaml
+app:
+  service:
+    type: LoadBalancer
+```
+
+## Monitoring and Troubleshooting
+
+### Check Pod Status
+```bash
+kubectl get pods -n student-api
+```
+
+### View Logs
+```bash
+# Application logs
+kubectl logs -n student-api -l app=stanford-api -f
+
+# Database logs
+kubectl logs -n student-api -l app=postgres -f
+
+# Vault logs
+kubectl logs -n vault-system -l app.kubernetes.io/name=vault -f
+```
+
+### Debug External Secrets
 ```bash
 kubectl get externalsecrets -n student-api
-kubectl get secrets -n student-api
-```
-
-### Vault setup (if needed):
-```bash
-# Port forward to Vault
-kubectl port-forward svc/vault-service 8200:8200 -n vault-system
-
-# Access Vault UI at http://localhost:8200
-# Token: root
-
-# Add database credentials
-vault kv put secret/database username=postgres password=postgres
+kubectl describe externalsecret app-credentials -n student-api
 ```
 
 ## Upgrading
 
-To upgrade the deployment:
 ```bash
 helm upgrade stanford-students-stack ./stanford-students-stack \
   --namespace student-api
@@ -186,13 +165,37 @@ helm upgrade stanford-students-stack ./stanford-students-stack \
 
 ## Uninstalling
 
-To completely remove the deployment:
+### Using Cleanup Script
 ```bash
 ./cleanup.sh
 ```
 
-Or manually:
+### Manual Cleanup
 ```bash
 helm uninstall stanford-students-stack -n student-api
-kubectl delete namespace student-api vault-system external-secrets-system
+kubectl delete namespace student-api
+kubectl delete namespace vault-system
+kubectl delete namespace external-secrets-system
 ```
+
+## Dependencies
+
+This chart includes the following dependencies:
+- **PostgreSQL**: Database (custom deployment, not using Bitnami chart)
+- **Vault**: Secret management (HashiCorp Helm chart)
+- **External Secrets Operator**: Secret synchronization (External Secrets Helm chart)
+
+## Security Notes
+
+- Vault is deployed in development mode with a static root token
+- For production, configure Vault with proper authentication and TLS
+- Database credentials are managed through Vault and External Secrets
+- All secrets are automatically rotated based on the refresh interval
+
+## Support
+
+For issues and questions:
+1. Check the pod logs for error messages
+2. Verify all dependencies are properly installed
+3. Ensure your Kubernetes cluster has sufficient resources
+4. Check the External Secrets Operator logs for secret synchronization issues
