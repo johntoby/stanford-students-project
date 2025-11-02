@@ -26,11 +26,14 @@ if ! kubectl cluster-info &> /dev/null; then
     exit 1
 fi
 
+echo "[$(date -Iseconds)] 🧹 Cleaning up existing resources..."
+helm uninstall "$RELEASE_NAME" -n "$NAMESPACE" --ignore-not-found
+kubectl delete namespace "$NAMESPACE" --ignore-not-found
+
 echo "[$(date -Iseconds)] 🚀 Deploying Stanford Students Stack Helm chart..."
-helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
+helm install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
     --create-namespace \
-    --skip-crds \
     --timeout=10m \
     --wait
 
