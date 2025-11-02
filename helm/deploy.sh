@@ -35,6 +35,7 @@ helm install "$RELEASE_NAME" "$CHART_PATH" \
     --namespace "$NAMESPACE" \
     --create-namespace \
     --skip-crds \
+    --replace \
     --timeout=10m \
     --wait
 
