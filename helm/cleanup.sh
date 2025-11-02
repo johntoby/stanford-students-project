@@ -13,8 +13,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 NAMESPACE="student-api"
-VAULT_NAMESPACE="vault-system"
-EXTERNAL_SECRETS_NAMESPACE="external-secrets-system"
+#VAULT_NAMESPACE="vault-system"
+#EXTERNAL_SECRETS_NAMESPACE="external-secrets-system"
 RELEASE_NAME="stanford-students-stack"
 
 # Function to print colored output
