@@ -192,6 +192,10 @@ This chart includes the following dependencies:
 - Database credentials are managed through Vault and External Secrets
 - All secrets are automatically rotated based on the refresh interval
 
+  ## Next steps
+
+  Next steps is to Add ArgoCD for GitOps deployment
+
 ## Support
 
 For issues and questions:
