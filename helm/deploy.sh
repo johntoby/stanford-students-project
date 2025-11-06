@@ -9,7 +9,7 @@ NAMESPACE="student-api"
 RELEASE_NAME="stanford-students-stack"
 CHART_PATH="./stanford-students-stack"
 
-# Check prerequisites
+# Check prerequisites before installation
 echo "🔍 Checking prerequisites..."
 if ! command -v helm &> /dev/null; then
     echo "❌ Helm is not installed"
