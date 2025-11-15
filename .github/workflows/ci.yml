@@ -120,6 +120,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
+        persist-credentials: true
         token: ${{ secrets.MY_GITHUB_TOKEN }}
         fetch-depth: 0
 
