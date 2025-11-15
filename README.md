@@ -85,7 +85,30 @@ make --version
 
 ## Running the API
 
-### Option 1: Using Helm Charts (Kubernetes - Recommended for Production)
+### Option 1: Using ArgoCD (GitOps - Recommended for Production)
+
+#### Prerequisites:
+- Kubernetes cluster
+- ArgoCD installed
+- Self-hosted GitHub runner configured
+
+#### Setup:
+```bash
+# Install ArgoCD and setup applications
+cd argocd
+kubectl apply -f namespace.yaml
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply -f install.yaml
+kubectl patch deployment argocd-server -n argocd -p '{"spec":{"template":{"spec":{"nodeSelector":{"type":"dependent_services"}}}}}'
+
+# Update repository URL in repository.yaml, then:
+kubectl apply -f repository.yaml
+kubectl apply -f application.yaml
+```
+
+**Note:** See [argocd/README.md](argocd/README.md) for detailed ArgoCD setup instructions.
+
+### Option 2: Using Helm Charts (Kubernetes - Recommended for Production)
 
 #### Prerequisites:
 - Kubernetes cluster (minikube, kind, or cloud provider)
@@ -125,7 +148,7 @@ cd helm
 
 **Note:** See [helm/README.md](helm/README.md) for detailed Helm deployment instructions.
 
-### Option 2: Using Make (Docker - Recommended for Development)
+### Option 3: Using Make (Docker - Recommended for Development)
 
 
 #### Quick Start:
@@ -172,7 +195,7 @@ The `run-api` target automatically handles dependencies in this order:
 2. **Check Migrations**: Verifies if migrations are applied (runs if needed)
 3. **Start API**: Uses docker-compose to start the API container
 
-### Option 3: Using Docker Compose
+### Option 4: Using Docker Compose
 
 ```bash
 # Start all services
@@ -182,7 +205,7 @@ docker-compose up --build
 docker-compose down
 ```
 
-### Option 4: Manual Setup (Local Development)
+### Option 5: Manual Setup (Local Development)
 
 1. Start PostgreSQL database
 2. Run: `go run main.go`
