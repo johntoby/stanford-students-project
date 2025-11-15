@@ -1,4 +1,4 @@
-# Build stage of the multi stage docker file
+# Build stage of the multi-stage docker file for the app
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
