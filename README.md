@@ -1,4 +1,4 @@
-# Stanford University Students API
+# Stanford University Students API Project
 
 A RESTful API for managing Stanford University Computer Science students built with Golang and Gin framework. This project is a solution to the ONE2N SRE Bootcamp, that aims to provide the entire DevOps journey from planning to buuilding to shiping an app into prod. I hope this helps someone navigating the bootcamp to get the right solution.
 
