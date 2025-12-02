@@ -7,7 +7,7 @@ app:
     repository: johntoby/stanford-students-api
     tag: latest
     pullPolicy: IfNotPresent
-  replicas: 2
+  replicas: 5
   port: 8080
   resources:
     requests:
