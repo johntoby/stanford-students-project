@@ -60,7 +60,7 @@
 ## Quick Deployment
 
 ```bash
-# Deploy everything
+# Deploy everything now
 ./k8s/deploy.sh
 
 # Check status

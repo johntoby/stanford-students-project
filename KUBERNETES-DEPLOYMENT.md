@@ -2,7 +2,7 @@
 
 ## 🎯 Stage 7 Solution: Deploy REST API and Dependencies in Kubernetes
 
-This guide provides the complete solution for deploying the Stanford Students API with PostgreSQL database and Nginx load balancer in Kubernetes.
+This guide provides the complete solution for deploying the Stanford Students API with PostgreSQL database and Nginx load balancer in Kubernetes for high availability deployments. 
 
 ## 📋 Prerequisites
 

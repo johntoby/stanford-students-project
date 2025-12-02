@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stanford-students-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/johntoby/stanford-students-project
+    targetRevision: HEAD
+    path: helm/stanford-students-stack
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: student-api
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

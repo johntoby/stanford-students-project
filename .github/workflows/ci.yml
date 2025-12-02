@@ -17,6 +17,7 @@ on:
       - 'middleware/**'
       - 'models/**'
       - 'router/**'
+      - 'frontend/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -33,6 +34,7 @@ on:
       - 'middleware/**'
       - 'models/**'
       - 'router/**'
+      - 'frontend/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -52,7 +54,7 @@ env:
 
 jobs:
   ci:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -108,3 +110,29 @@ jobs:
       run: |
         docker system prune -f
         echo "🧹 Cleanup completed"
+
+  update-helm-values:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+        token: ${{ secrets.MY_GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Update Helm values with new image tag
+      run: |
+        echo "📝 Updating Helm values with image tag: ${{ env.DOCKER_TAG }}"
+        sed -i "s|tag: .*|tag: ${{ env.DOCKER_TAG }}|g" helm/stanford-students-stack/values.yaml
+        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add helm/stanford-students-stack/values.yaml
+        git commit -m "Update image tag to ${{ env.DOCKER_TAG }}" || exit 0
+        git push
