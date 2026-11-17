@@ -1,5 +1,7 @@
 # Kubernetes Deployment Guide - Stanford Students API
 
+> **Note:** This guide documents an earlier iteration of the Kubernetes setup (Nginx + Ingress + NodePort, per-resource manifests). The manifests it references were later consolidated; the current raw manifests live in [`k8s/`](k8s/README.md) and the GitOps-managed deployment uses the [Helm chart](helm/README.md) synced by [ArgoCD](argocd/README.md).
+
 ## 🎯 Stage 7 Solution: Deploy REST API and Dependencies in Kubernetes
 
 This guide provides the complete solution for deploying the Stanford Students API with PostgreSQL database and Nginx load balancer in Kubernetes for high availability deployments. 
