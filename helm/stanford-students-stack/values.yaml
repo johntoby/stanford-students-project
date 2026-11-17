@@ -5,7 +5,7 @@ app:
   name: stanford-api
   image:
     repository: johntoby/stanford-students-api
-    tag: 72ba28e6fb6260ca6d189fdec1837c07e3d89d30
+    tag: 4281096da2ab05f1a854f21b7055417a76c79166
     pullPolicy: IfNotPresent
   replicas: 5
   port: 8080
