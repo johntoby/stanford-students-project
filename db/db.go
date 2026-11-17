@@ -11,7 +11,7 @@ import (
 // InitDB initializes the database connection
 func InitDB(cfg *config.Config) (*sql.DB, error) {
 	connStr := cfg.GetDBConnectionString()
-	log.Printf("Attempting to connect to database with connection string: %s", connStr)
+	log.Printf("Attempting to connect to database %s at %s:%s as user %s", cfg.DBName, cfg.DBHost, cfg.DBPort, cfg.DBUser)
 	
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
