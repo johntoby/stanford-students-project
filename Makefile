@@ -31,6 +31,7 @@ help:
 	@echo "  status        - Show container status"
 	@echo "  logs          - Show application logs"
 	@echo "  logs-nginx    - Show nginx logs"
+	@echo "  debug         - Show compose status and recent container logs"
 	@echo "  clean         - Remove containers, network and volumes"
 
 # Create Docker network
@@ -196,14 +197,14 @@ debug:
 	@echo "🔍 Debugging container issues..."
 	@echo "Container Status:"
 	@$(DOCKER_COMPOSE) ps
-	@echo "
-App1 Logs:"
+	@echo ""
+	@echo "App1 Logs:"
 	@$(DOCKER_COMPOSE) logs --tail=20 app1
-	@echo "
-App2 Logs:"
+	@echo ""
+	@echo "App2 Logs:"
 	@$(DOCKER_COMPOSE) logs --tail=20 app2
-	@echo "
-Postgres Logs:"
+	@echo ""
+	@echo "Postgres Logs:"
 	@$(DOCKER_COMPOSE) logs --tail=10 postgres
 
 # Clean up everything
